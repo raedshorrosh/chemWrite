@@ -2,7 +2,9 @@
 
 [[script src="https://unpkg.com/mathlive"]][[/script]]
 [[style]]
-    math-field::part(virtual-keyboard-toggle) {
+    /* This targets BOTH the keyboard icon and the menu icon */
+    math-field::part(virtual-keyboard-toggle),
+    math-field::part(menu-toggle) {
       display: none !important;
     }
   [[/style]]
