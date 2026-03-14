@@ -136,8 +136,11 @@ function processChem(latex) {
         }).sort().join("+");
     }
 
-    let exactStr = makeExact(leftTerms) + theArrow + makeExact(rightTerms);
-    let sloppyStr = makeSloppy(leftTerms) + "ARROW" + makeSloppy(rightTerms);
+  let exactStr = makeExact(leftTerms) + theArrow + makeExact(rightTerms);
+    
+    // Process the arrow's contents so we don't accidentally throw away swallowed isotopes!
+    let sloppyArrow = makeSloppy([theArrow]); 
+    let sloppyStr = makeSloppy(leftTerms) + "ARROW" + sloppyArrow + "ARROW" + makeSloppy(rightTerms);
 
     return { exact: exactStr, sloppy: sloppyStr };
 }
