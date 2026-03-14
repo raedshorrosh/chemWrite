@@ -101,8 +101,15 @@ function processChem(latex) {
     let leftTerms = splitTerms(leftSide);
     let rightTerms = splitTerms(rightSide);
 
-    function makeExact(terms) {
-        return terms.map(t => t.replace(/\s+/g, '')).sort().join("+");
+   function makeExact(terms) {
+        return terms.map(t => {
+            return t.replace(/\s+/g, '')                  // Remove spaces
+                    .replace(/\\left/g, '')               // Remove auto-sizing brackets
+                    .replace(/\\right/g, '')              // Remove auto-sizing brackets
+                    .replace(/[\{\}]/g, '')               // Remove invisible grouping braces
+                    .replace(/_\((s|l|g|aq)\)/gi, '($1)') // STRICT FIX: Only rescue states of matter
+                    .replace(/_+/g, '_');                 // Clean up any remaining extra underscores
+        }).sort().join("+");
     }
 
     function makeSloppy(terms) {
