@@ -108,12 +108,14 @@ function processChem(latex) {
     let leftTerms = splitTerms(leftSide);
     let rightTerms = splitTerms(rightSide);
 
-   function makeExact(terms) {
+ function makeExact(terms) {
         return terms.map(t => {
             return t.replace(/\s+/g, '')                  // Remove spaces
                     .replace(/\\left/g, '')               // Remove auto-sizing brackets
                     .replace(/\\right/g, '')              // Remove auto-sizing brackets
                     .replace(/[\{\}]/g, '')               // Remove invisible grouping braces
+                    .replace(/\^([+-])(\d+)/g, '^$2$1')   // Step 1: Flip +2 to 2+, -3 to 3-, etc.
+                    .replace(/\^1([+-])/g, '^$1')         // Step 2: Drop the 1 from 1+ or 1-
                     .replace(/_\((s|l|g|aq)\)/gi, '($1)') // STRICT FIX: Only rescue states of matter
                     .replace(/_+/g, '_');                 // Clean up any remaining extra underscores
         }).sort().join("+");
@@ -121,9 +123,12 @@ function processChem(latex) {
 
     function makeSloppy(terms) {
         return terms.map(t => {
-            return t.replace(/\\[a-zA-Z]+/g, '')
-                    .replace(/[_^{}\(\)\[\]]/g, '')
-                    .replace(/\s+/g, '')
+            return t.replace(/[\{\}]/g, '')               // Remove braces first to expose the charges
+                    .replace(/\^([+-])(\d+)/g, '^$2$1')   // Step 1: Flip +2 to 2+, -3 to 3-, etc.
+                    .replace(/\^1([+-])/g, '^$1')         // Step 2: Drop the 1 from 1+ or 1-
+                    .replace(/\\[a-zA-Z]+/g, '')          // Strip remaining LaTeX formatting
+                    .replace(/[_^{}\(\)\[\]]/g, '')       // Strip remaining math brackets
+                    .replace(/\s+/g, '')                  // Strip remaining spaces
                     .toLowerCase();
         }).sort().join("+");
     }
