@@ -1,6 +1,11 @@
 [[iframe width="100%" height="350px"]]
 
 [[script src="https://unpkg.com/mathlive"]][[/script]]
+[[style]]
+    math-field::part(virtual-keyboard-toggle) {
+      display: none !important;
+    }
+  [[/style]]
 
 <div style="font-family: sans-serif; padding: 10px; box-sizing: border-box;">
     <div id="button-palette" style="background: white; border: 1px solid #ced4da; border-radius: 6px; margin-bottom: 15px; overflow: hidden; width: fit-content; max-width: 100%;">
