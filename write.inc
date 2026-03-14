@@ -7,15 +7,7 @@
     math-field::part(menu-toggle) {
       display: none !important;
     }
-  /* Force all text, superscripts, and placeholders to be solid black */
-    math-field {
-      --text-color: #000000 !important;
-      --placeholder-color: #000000 !important;
-      --placeholder-opacity: 1 !important;
-      color: #000000 !important;
- 
 
-    }
   [[/style]]
 
 <div style="font-family: sans-serif; padding: 10px; box-sizing: border-box;">
