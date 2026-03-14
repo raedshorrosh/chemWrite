@@ -58,9 +58,16 @@ for (let i = 0; i < texs.length; i++) {
     const overlayHtml = `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 100;"></div>`;
     btn.innerHTML = mathHtml + overlayHtml;
     
-    btn.addEventListener('click', (e) => {
+  btn.addEventListener('click', (e) => {
         e.preventDefault(); e.stopPropagation();
-        mf.insert(insertTex); mf.focus();
+        if (insertTex === "^") {
+            mf.executeCommand("moveToSuperscript");
+        } else if (insertTex === "_") {
+            mf.executeCommand("moveToSubscript");
+        } else {
+            mf.insert(insertTex); 
+        }
+        mf.focus();
     });
     btnContainer.appendChild(btn);
 }
