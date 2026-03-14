@@ -208,8 +208,3 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
 });
 [[/script]]
 [[/iframe]]
-<div style="display: {#debug_display#}; background-color: #ffe6e6; border: 2px dashed red; padding: 10px; margin-top: 20px;">
-    <h4 style="color: red; margin-top: 0;">Teacher Debug Panel</h4>
-    <p><strong>ans1 (Raw LaTeX):</strong> [[input:ans1]] [[validation:ans1]]</p>
-    <p><strong>ans2 (Calculated Grade):</strong> [[input:ans2]] [[validation:ans2]]</p>
-</div>
