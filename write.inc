@@ -61,7 +61,7 @@ for (let i = 0; i < texs.length; i++) {
     
     const btn = document.createElement('div');
     btn.style.cssText = "position: relative; cursor: pointer; width: 85px; height: 45px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; user-select: none; transition: all 0.2s;";
-    const mathHtml = `<math-field read-only tabindex="-1" style="pointer-events: none; background: transparent; border: none; padding: 0; margin: 0; min-height: auto; font-size: 1.1em; --placeholder-color: #000000; --placeholder-opacity: 1; color: #000000;">${displayTex}</math-field>`;    const overlayHtml = `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 100;"></div>`;
+    const mathHtml = `<math-field tabindex="-1" style="pointer-events: none; background: transparent; border: none; padding: 0; margin: 0; min-height: auto; font-size: 1.1em; --text-color: #000000; --placeholder-color: #000000; --placeholder-opacity: 1; color: #000000;">${displayTex}</math-field>`;
     btn.innerHTML = mathHtml + overlayHtml;
     
   btn.addEventListener('click', (e) => {
