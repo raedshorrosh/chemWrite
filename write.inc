@@ -12,7 +12,10 @@
       --text-color: #000000 !important;
       --placeholder-color: #000000 !important;
       --placeholder-opacity: 1 !important;
+     --operator-color: #000000 !important;
       color: #000000 !important;
+      fill: #000000 !important;
+      text-shadow: 0 0 0 #000000 !important;
     }
   [[/style]]
 
