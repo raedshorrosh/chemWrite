@@ -81,6 +81,10 @@ for (let i = 0; i < texs.length; i++) {
 }
 
 function processChem(latex) {
+// PROTECT AND BIND THE COLOR: 
+    // Changes \textcolor{red} to COLORred so it survives the regex and gets graded
+    latex = latex.replace(/\\textcolor\{([^}]+)\}/g, 'COLOR$1');
+
     let arrowRegex = /((?:\\longrightarrow|\\xrightarrow|\\rightarrow|\\rightleftharpoons|\\Rightarrow)(?:_\{.*?\}|\^\{.*?\}|\{.*?\}|\[.*?\])*|=)/;
     let parts = latex.split(arrowRegex);
     
