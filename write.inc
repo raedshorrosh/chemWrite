@@ -32,7 +32,7 @@ try {
 
 let chemPrefix = "";
 try {
-    chemPrefix = "{#prefix#}"; // Assuming you name the Maxima variable prefix
+    chemPrefix = {#prefix#}; // Assuming you name the Maxima variable prefix
 } catch (e) { console.log("No prefix provided."); }
 
 let texs = [];
