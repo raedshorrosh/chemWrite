@@ -30,6 +30,11 @@ try {
     if (customTitle) document.getElementById('palette-title').innerText = customTitle;
 } catch (e) { console.log("No custom title provided."); }
 
+let chemPrefix = "";
+try {
+    chemPrefix = "{#prefix#}"; // Assuming you name the Maxima variable prefix
+} catch (e) { console.log("No prefix provided."); }
+
 let texs = [];
 try {
     texs = JSON.parse({#js_tex#});
@@ -215,11 +220,25 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             }
         }
 
-        if (hiddenInput1.value && hiddenInput1.value.trim() !== "") {
-            mf.setValue(hiddenInput1.value.replace(/\\\\/g, '\\'), {suppressChangeNotifications: true});
-            evaluateStudent(); 
-        }
-        
+       // Check if STACK already has a saved answer from the student
+if (hiddenInput1.value && hiddenInput1.value.trim() !== "") {
+    
+    mf.setValue(hiddenInput1.value.replace(/\\\\/g, '\\'), {suppressChangeNotifications: true});
+    evaluateStudent(); 
+
+// Otherwise, check if the teacher provided a prefix
+} else if (typeof chemPrefix !== 'undefined' && chemPrefix.trim() !== "") {
+    
+    // 1. Update the MathLive editor (handling backslashes safely)
+    mf.setValue(chemPrefix.replace(/\\\\/g, '\\'), {suppressChangeNotifications: true});
+    
+    // 2. Update the STACK input field immediately
+    hiddenInput1.value = chemPrefix.replace(/\\/g, '\\\\');
+    hiddenInput1.dispatchEvent(new Event('change')); // Tell STACK it changed
+    
+    // 3. Run evaluation so ans2 is also initialized
+    evaluateStudent();
+}
         mf.addEventListener('input', evaluateStudent);
 
         let lastVal = hiddenInput1.value;
