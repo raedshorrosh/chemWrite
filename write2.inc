@@ -276,11 +276,15 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             }
         }
 
-        let savedAnswers = [];
+      let savedAnswers = [];
         if (hiddenInput1.value && hiddenInput1.value.trim() !== "") {
-            try { savedAnswers = JSON.parse(hiddenInput1.value); } catch(e) {}
+            try { 
+                let parsed = JSON.parse(hiddenInput1.value);
+                // If Moodle double-quoted the correct answer, unpack it again!
+                if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+                if (Array.isArray(parsed)) savedAnswers = parsed;
+            } catch(e) {}
         }
-        
         mfs.forEach((mfObj, index) => {
             if (savedAnswers[index]) {
                 mfObj.element.setValue(savedAnswers[index].replace(/\\\\/g, '\\'), {suppressChangeNotifications: true});
