@@ -1,10 +1,19 @@
-<div><br class="Apple-interchange-newline">[[iframe width="100%" height="600px"]]<br><br>[[script src="https://unpkg.com/mathlive"]][[/script]]<br>[[style]]
+<div><br class="Apple-interchange-newline">[[iframe width="100%" height="450px"]]<br><br>[[script src="https://unpkg.com/mathlive"]][[/script]]<br>[[style]]
     /* This targets BOTH the keyboard icon and the menu icon */
     math-field::part(virtual-keyboard-toggle),
     math-field::part(menu-toggle) {
       display: none !important;
     }
 [[/style]]
+
+<div style="display: none;">
+    <div id="data-tas">{#js_tas#}</div>
+    <div id="data-prefixes">{#js_prefixes#}</div>
+    <div id="data-titles">{#js_titles#}</div>
+    <div id="data-tex">{#js_tex#}</div>
+    <div id="data-title">{#js_title#}</div>
+    <div id="data-partial">{#js_partial_credit#}</div>
+</div>
 
 <div style="font-family: sans-serif; padding: 10px; box-sizing: border-box;">
     <div id="button-palette" style="background: white; border: 1px solid #ced4da; border-radius: 6px; margin-bottom: 25px; overflow: hidden; width: fit-content; max-width: 100%;">
@@ -21,11 +30,20 @@
 [[script type="module"]]
 import {stack_js} from '[[cors src="stackjsiframe.js"/]]';
 
-// --- 1. Parse Maxima Variables ---
+// --- 1. Parse Maxima Variables Safely ---
+function getStackData(id) {
+    let el = document.getElementById(id);
+    if (!el) return null;
+    let txt = el.innerText || el.textContent;
+    // If STACK failed to compile, it leaves the raw tag. We ignore it.
+    if (txt.includes('{#')) return null; 
+    return txt.trim();
+}
+
 try {
-    let customTitle = {#js_title#};
+    let customTitle = getStackData('data-title');
     if (customTitle) document.getElementById('palette-title').innerText = customTitle;
-} catch (e) { console.log("No custom title provided."); }
+} catch (e) {}
 
 let tas = [];
 let prefixes = [];
@@ -33,12 +51,28 @@ let titles = [];
 let texs = [];
 let partialCredit = 0.5;
 
-try { tas = JSON.parse('{#js_tas#}'); } catch (e) { console.error("Missing js_tas array."); }
-try { prefixes = JSON.parse('{#js_prefixes#}'); } catch (e) { }
-try { titles = JSON.parse('{#js_titles#}'); } catch (e) { }
-try { texs = JSON.parse({#js_tex#}); } catch (e) { console.error("Failed to parse js_tex"); }
+try { 
+    let tData = getStackData('data-tas');
+    if (tData) tas = JSON.parse(tData); 
+} catch (e) { console.error("Error parsing js_tas array"); }
+
+try { 
+    let pData = getStackData('data-prefixes');
+    if (pData) prefixes = JSON.parse(pData); 
+} catch (e) {}
+
+try { 
+    let titleData = getStackData('data-titles');
+    if (titleData) titles = JSON.parse(titleData); 
+} catch (e) {}
+
+try { 
+    let texData = getStackData('data-tex');
+    if (texData) texs = JSON.parse(texData); 
+} catch (e) { console.error("Error parsing js_tex array"); }
+
 try {
-    let parsedPartial = parseFloat("{#js_partial_credit#}");
+    let parsedPartial = parseFloat(getStackData('data-partial'));
     if (!isNaN(parsedPartial)) partialCredit = parsedPartial;
 } catch (e) {}
 
@@ -49,7 +83,6 @@ let mfs = []; // Array to hold references to all generated mathfields
 let activeMathField = null; // The Tracker
 
 // --- 3. Process Teacher Answers ---
-// Process processChem function (Kept perfectly intact from your original code)
 function processChem(latex) {
     latex = latex.replace(/\\textcolor\{([^}]+)\}/g, 'COLOR$1');
     let arrowRegex = /((?:\\longrightarrow|\\xrightarrow|\\rightarrow|\\rightleftharpoons|\\Rightarrow)(?:_\{.*?\}|\^\{.*?\}|\{.*?\}|\[.*?\])*|=)/;
@@ -159,7 +192,7 @@ tas.forEach((ta, index) => {
 // Default active to the first field
 if (mfs.length > 0) { activeMathField = mfs[0].element; }
 
-// --- 5. Build Preset Buttons (Targeting activeMathField) ---
+// --- 5. Build Preset Buttons ---
 for (let i = 0; i < texs.length; i++) {
     let displayTex = Array.isArray(texs[i]) ? texs[i][0] : texs[i];
     let insertTex = Array.isArray(texs[i]) ? (texs[i][1] || texs[i][0]) : texs[i];
@@ -174,7 +207,7 @@ for (let i = 0; i < texs.length; i++) {
     
     btn.addEventListener('click', (e) => {
         e.preventDefault(); e.stopPropagation();
-        if (!activeMathField) return; // Do nothing if no field is active
+        if (!activeMathField) return; 
         
         if (insertTex === "^") {
             activeMathField.executeCommand("moveToSuperscript");
@@ -183,7 +216,7 @@ for (let i = 0; i < texs.length; i++) {
         } else {
             activeMathField.insert(insertTex); 
         }
-        activeMathField.focus(); // Keep cursor in the active field
+        activeMathField.focus(); 
     });
     btnContainer.appendChild(btn);
 }
@@ -198,7 +231,6 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
         const isLocked = hiddenInput1.readOnly || hiddenInput1.disabled || 
                          hiddenInput1.hasAttribute('readonly') || hiddenInput1.hasAttribute('disabled');
         
-        // Function to evaluate ALL mathfields and update arrays
         function evaluateStudent() {
             if (isLocked) return; 
             
@@ -221,7 +253,6 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 }
             });
             
-            // Convert to JSON strings (which STACK native parses as Maxima Lists)
             let newAnsStr = JSON.stringify(currentAnswers);
             let newGradeStr = JSON.stringify(currentGrades);
             
@@ -235,7 +266,6 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             }
         }
 
-        // Initialize / Restore Values
         let savedAnswers = [];
         if (hiddenInput1.value && hiddenInput1.value.trim() !== "") {
             try { savedAnswers = JSON.parse(hiddenInput1.value); } catch(e) {}
@@ -247,11 +277,9 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             } else if (prefixes[index]) {
                 mfObj.element.setValue(prefixes[index].replace(/\\\\/g, '\\'), {suppressChangeNotifications: true});
             }
-            // Listen for typing
             mfObj.element.addEventListener('input', evaluateStudent);
         });
         
-        // Initial Evaluation to populate ans1/ans2
         if (!isLocked) evaluateStudent();
 
         // --- VISUAL MARKING (If Submitted) ---
