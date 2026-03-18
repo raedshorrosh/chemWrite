@@ -13,6 +13,7 @@
     <div id="data-tex">{#js_tex#}</div>
     <div id="data-title">{#js_title#}</div>
     <div id="data-partial">{#js_partial_credit#}</div>
+    <div id="data-debug">{#debug_display#}</div> 
 </div>
 
 <div style="font-family: sans-serif; padding: 10px; box-sizing: border-box;">
@@ -326,8 +327,7 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 }
             });
         }
-        // --- 7. Teacher Helper: Clean Copy Box ---
-        // Create the dedicated, perfectly formatted box for the teacher
+// --- 7. Teacher Helper: Clean Copy Box ---
         let teacherBox = document.getElementById('teacher-box');
         if (!teacherBox) {
             teacherBox = document.createElement('div');
@@ -343,33 +343,26 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             document.getElementById('mathfields-container').parentNode.appendChild(teacherBox);
         }
 
+        // Grab the debug status that we snuck into the iframe
+        let debugStatus = getStackData('data-debug');
+
         function updateTeacherBox() {
-            // Grab the clean math directly from MathLive
-            let currentAnswers = mfs.map(mf => mf.element.getValue());
+            // If Maxima says "none", kill the blue box immediately and stop running
+            if (debugStatus === 'none') {
+                teacherBox.style.display = 'none';
+                return; 
+            }
+
+            // Otherwise, build the box!
+            teacherBox.style.display = 'block';
             
-            // Format it perfectly for Maxima (forces exactly two backslashes)
+            let currentAnswers = mfs.map(mf => mf.element.getValue());
             let maximaString = '["' + currentAnswers.join('", "') + '"]';
             maximaString = maximaString.replace(/\\/g, '\\\\');
             
-            // Display it on the screen
             teacherBox.innerText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\nta: " + maximaString + ";";
-
-            // --- The Iframe Shadow Logic ---
-            try {
-                // Look out of the iframe at the main page for the red debug panel
-                let parentDebugPanel = window.parent.document.getElementById('debug-panel');
-                if (parentDebugPanel && parentDebugPanel.style.display === 'none') {
-                    teacherBox.style.display = 'none';
-                } else {
-                    teacherBox.style.display = 'block';
-                }
-            } catch (e) {
-                // Fallback just in case Moodle blocks parent-window access
-                teacherBox.style.display = 'block'; 
-            }
         }
 
-        // Keep it updated whenever you type or click
         mfs.forEach(mfObj => mfObj.element.addEventListener('input', updateTeacherBox));
         setInterval(updateTeacherBox, 500);
     });
