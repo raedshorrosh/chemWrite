@@ -327,35 +327,42 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 }
             });
         }
-// --- 7. Teacher Helper: Clean Copy Box (Iframe Version) ---
+// --- 7. Teacher Helper: Clean Copy Box (Cross-Boundary Copy) ---
 function updateTeacherBox() {
-    // Look OUTSIDE the iframe to find the box you put in the HTML
-    const teacherBox = window.parent.document.getElementById('teacher-box');
+    const parentDoc = window.parent.document;
+    const teacherBox = parentDoc.getElementById('teacher-box');
     
-    // If the box isn't there (or the table is hidden), stop
     if (!teacherBox) return;
 
-    // 1. Collect values from MathLive (inside the iframe)
+    // 1. Collect and format the values
     let currentAnswers = mfs.map(mf => mf.element.getValue());
-
-    // 2. Format for Maxima
     let maximaArray = '["' + currentAnswers.join('", "') + '"]';
     maximaArray = maximaArray.replace(/\\/g, '\\\\');
     const finalCode = "ta: " + maximaArray + ";";
 
-    // 3. Inject the text into the box (outside the iframe)
+    // 2. Inject the formatted text
     teacherBox.innerText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\n\n" + finalCode;
 
-    // 4. Handle the click-to-copy
+    // 3. Attach the Click-to-Copy logic to the parent element
+    // We use a standard execCommand fallback because clipboards hate iframes
     teacherBox.onclick = () => {
-        navigator.clipboard.writeText(finalCode);
-        const originalText = teacherBox.innerText;
-        teacherBox.innerText = "✅ COPIED TO CLIPBOARD!";
-        setTimeout(() => { teacherBox.innerText = originalText; }, 1000);
+        const textArea = parentDoc.createElement("textarea");
+        textArea.value = finalCode;
+        parentDoc.body.appendChild(textArea);
+        textArea.select();
+        try {
+            parentDoc.execCommand('copy');
+            const originalText = teacherBox.innerText;
+            teacherBox.innerText = "✅ COPIED TO CLIPBOARD!";
+            setTimeout(() => { teacherBox.innerText = originalText; }, 1000);
+        } catch (err) {
+            console.error('Fallback copy failed', err);
+        }
+        parentDoc.body.removeChild(textArea);
     };
 }
 
-// Keep it in sync
+// Sync it up
 mfs.forEach(mfObj => mfObj.element.addEventListener('input', updateTeacherBox));
 setInterval(updateTeacherBox, 500);
     });
