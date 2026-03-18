@@ -327,29 +327,35 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 }
             });
         }
-// --- 7. Teacher Helper: Clean Copy Box ---
-const teacherBox = document.getElementById('teacher-box');
-
+// --- 7. Teacher Helper: Clean Copy Box (Iframe Version) ---
 function updateTeacherBox() {
-    // If the element isn't on the page at all, stop.
-    if (!teacherBox) return; 
+    // Look OUTSIDE the iframe to find the box you put in the HTML
+    const teacherBox = window.parent.document.getElementById('teacher-box');
+    
+    // If the box isn't there (or the table is hidden), stop
+    if (!teacherBox) return;
 
+    // 1. Collect values from MathLive (inside the iframe)
     let currentAnswers = mfs.map(mf => mf.element.getValue());
+
+    // 2. Format for Maxima
     let maximaArray = '["' + currentAnswers.join('", "') + '"]';
     maximaArray = maximaArray.replace(/\\/g, '\\\\');
-
-    // Just update the content. The HTML <table> handles the visibility.
     const finalCode = "ta: " + maximaArray + ";";
+
+    // 3. Inject the text into the box (outside the iframe)
     teacherBox.innerText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\n\n" + finalCode;
 
+    // 4. Handle the click-to-copy
     teacherBox.onclick = () => {
         navigator.clipboard.writeText(finalCode);
         const originalText = teacherBox.innerText;
-        teacherBox.innerText = "✅ COPIED!";
+        teacherBox.innerText = "✅ COPIED TO CLIPBOARD!";
         setTimeout(() => { teacherBox.innerText = originalText; }, 1000);
     };
 }
 
+// Keep it in sync
 mfs.forEach(mfObj => mfObj.element.addEventListener('input', updateTeacherBox));
 setInterval(updateTeacherBox, 500);
     });
