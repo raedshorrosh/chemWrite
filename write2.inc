@@ -293,7 +293,8 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             }
             mfObj.element.addEventListener('input', evaluateStudent);
         });
-        
+        evaluateStudent();
+
         if (!isLocked) evaluateStudent();
 
         // --- VISUAL MARKING (If Submitted) ---
