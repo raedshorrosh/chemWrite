@@ -286,18 +286,27 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 if (Array.isArray(parsed)) savedAnswers = parsed;
             } catch(e) {}
         }
-     // --- 1. Load the boxes normally ---
+// --- 1. Load the boxes normally & Set up Listeners ---
         mfs.forEach((mfObj, index) => {
+            // Load saved data or prefixes
             if (savedAnswers[index]) {
                 mfObj.element.setValue(savedAnswers[index].replace(/\\+/g, '\\'), {suppressChangeNotifications: true});
             } else if (prefixes[index]) {
                 mfObj.element.setValue(prefixes[index].replace(/\\+/g, '\\'), {suppressChangeNotifications: true});
             }
-            mfObj.element.addEventListener('input', evaluateStudent);
+
+            // ONE Listener: Saves to STACK AND updates Teacher Box
+            mfObj.element.addEventListener('input', () => {
+                evaluateStudent();   
+                updateTeacherBox();  
+            });
         });
 
-        if (!isLocked) evaluateStudent();
-
+        // Sync everything immediately on page load
+        if (!isLocked) {
+            evaluateStudent();
+            updateTeacherBox();
+        }
 
         // --- VISUAL MARKING (If Submitted) ---
         if (isLocked) {
@@ -327,40 +336,23 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 }
             });
         }
-// --- 7. Teacher Helper: Clean Copy Box (Highlight-Friendly) ---
+    }); // End of ans2 promise
+}); // End of ans1 promise
+
+// --- 7. Teacher Helper Function (Outside the promise to keep it clean) ---
 function updateTeacherBox() {
     const teacherBox = window.parent.document.getElementById('teacher-box');
     if (!teacherBox) return;
 
-    // 1. Collect values
     let currentAnswers = mfs.map(mf => mf.element.getValue());
-    
-    // 2. Format for Maxima
     let maximaArray = '["' + currentAnswers.join('", "') + '"]';
     maximaArray = maximaArray.replace(/\\/g, '\\\\');
     const newText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\n\n" + "ta: " + maximaArray + ";";
 
-    // 3. ONLY update if the text has actually changed!
-    // This prevents the "refresh" from killing your mouse highlight.
     if (teacherBox.innerText !== newText) {
         teacherBox.innerText = newText;
     }
 }
-
-// 4. Update ONLY on input (when someone types)
-mfs.forEach(mfObj => {
-    mfObj.element.addEventListener('input', () => {
-        evaluateStudent();   // This saves the answer to STACK
-        updateTeacherBox();  // This updates your blue box
-    });
-});
-
-// Run once on load
-updateTeacherBox();
-
-// REMOVE the setInterval line entirely! 
-// It was the "hammer" causing the problem.
-});
-});
+// Note: We removed the extra }); }); that were here.
 [[/script]]
 [[/iframe]]</div>
