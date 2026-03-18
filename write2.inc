@@ -297,27 +297,6 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
 
         if (!isLocked) evaluateStudent();
 
-// --- 2. Teacher Helper: Inject clean code into the HTML panel ---
-        function updateTeacherBox() {
-            // Moved INSIDE the function so it continually searches until the page loads
-            let teacherBox = document.getElementById('teacher-box');
-            
-            if (!teacherBox) return; // If not found yet, wait and try again
-            
-            // Grab the clean math directly from MathLive
-            let currentAnswers = mfs.map(mf => mf.element.getValue());
-            
-            // Format it perfectly for Maxima (forces exactly two backslashes)
-            let maximaString = '["' + currentAnswers.join('", "') + '"]';
-            maximaString = maximaString.replace(/\\/g, '\\\\');
-            
-            // Inject it directly into the HTML panel
-            teacherBox.innerText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\nta: " + maximaString + ";";
-        }
-
-        // Keep it updated whenever you type or click "Fill correct responses"
-        mfs.forEach(mfObj => mfObj.element.addEventListener('input', updateTeacherBox));
-        setInterval(updateTeacherBox, 500);
 
         // --- VISUAL MARKING (If Submitted) ---
         if (isLocked) {
@@ -347,7 +326,52 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 }
             });
         }
-        
+        // --- 7. Teacher Helper: Clean Copy Box ---
+        // Create the dedicated, perfectly formatted box for the teacher
+        let teacherBox = document.getElementById('teacher-box');
+        if (!teacherBox) {
+            teacherBox = document.createElement('div');
+            teacherBox.id = 'teacher-box';
+            teacherBox.style.padding = "10px";
+            teacherBox.style.marginTop = "20px";
+            teacherBox.style.backgroundColor = "#e8f4f8";
+            teacherBox.style.border = "2px dashed #007bb5";
+            teacherBox.style.fontFamily = "monospace";
+            teacherBox.style.whiteSpace = "pre-wrap";
+            
+            // Put it right under the math boxes inside the iframe
+            document.getElementById('mathfields-container').parentNode.appendChild(teacherBox);
+        }
+
+        function updateTeacherBox() {
+            // Grab the clean math directly from MathLive
+            let currentAnswers = mfs.map(mf => mf.element.getValue());
+            
+            // Format it perfectly for Maxima (forces exactly two backslashes)
+            let maximaString = '["' + currentAnswers.join('", "') + '"]';
+            maximaString = maximaString.replace(/\\/g, '\\\\');
+            
+            // Display it on the screen
+            teacherBox.innerText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\nta: " + maximaString + ";";
+
+            // --- The Iframe Shadow Logic ---
+            try {
+                // Look out of the iframe at the main page for the red debug panel
+                let parentDebugPanel = window.parent.document.getElementById('debug-panel');
+                if (parentDebugPanel && parentDebugPanel.style.display === 'none') {
+                    teacherBox.style.display = 'none';
+                } else {
+                    teacherBox.style.display = 'block';
+                }
+            } catch (e) {
+                // Fallback just in case Moodle blocks parent-window access
+                teacherBox.style.display = 'block'; 
+            }
+        }
+
+        // Keep it updated whenever you type or click
+        mfs.forEach(mfObj => mfObj.element.addEventListener('input', updateTeacherBox));
+        setInterval(updateTeacherBox, 500);
     });
 });
 [[/script]]
