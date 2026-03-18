@@ -341,25 +341,7 @@ function updateTeacherBox() {
     const finalCode = "ta: " + maximaArray + ";";
 
     // 2. Inject the formatted text
-    teacherBox.innerText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\n\n" + finalCode;
-
-    // 3. Attach the Click-to-Copy logic to the parent element
-    // We use a standard execCommand fallback because clipboards hate iframes
-    teacherBox.onclick = () => {
-        const textArea = parentDoc.createElement("textarea");
-        textArea.value = finalCode;
-        parentDoc.body.appendChild(textArea);
-        textArea.select();
-        try {
-            parentDoc.execCommand('copy');
-            const originalText = teacherBox.innerText;
-            teacherBox.innerText = "✅ COPIED TO CLIPBOARD!";
-            setTimeout(() => { teacherBox.innerText = originalText; }, 1000);
-        } catch (err) {
-            console.error('Fallback copy failed', err);
-        }
-        parentDoc.body.removeChild(textArea);
-    };
+    teacherBox.innerText = finalCode;
 }
 
 // Sync it up
