@@ -285,7 +285,7 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 if (Array.isArray(parsed)) savedAnswers = parsed;
             } catch(e) {}
         }
-       // --- 1. Load the boxes normally ---
+     // --- 1. Load the boxes normally ---
         mfs.forEach((mfObj, index) => {
             if (savedAnswers[index]) {
                 mfObj.element.setValue(savedAnswers[index].replace(/\\+/g, '\\'), {suppressChangeNotifications: true});
@@ -297,37 +297,39 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
 
         if (!isLocked) evaluateStudent();
 
-        // --- 2. The Watcher: Cleans up Moodle's "Fill Responses" button ---
-        let lastKnownValue = hiddenInput1.value;
-        setInterval(() => {
-            // Did Moodle or the user change the box?
-            if (hiddenInput1.value !== lastKnownValue) {
-                let newVal = hiddenInput1.value;
-                
-                // If Moodle injected 4 backslashes (\\\\), instantly crush them to 2 (\\)
-                if (newVal.includes('\\\\\\\\')) {
-                    newVal = newVal.replace(/\\\\\\\\/g, '\\\\');
-                    hiddenInput1.value = newVal; // Overwrite the ugly text with clean text
-                }
-                
-                // Force MathLive to render the newly injected answers
-                try {
-                    let parsed = JSON.parse(newVal);
-                    if (typeof parsed === 'string') parsed = JSON.parse(parsed);
-                    if (Array.isArray(parsed)) {
-                        mfs.forEach((mfObj, index) => {
-                            if (parsed[index]) {
-                                mfObj.element.setValue(parsed[index].replace(/\\+/g, '\\'), {suppressChangeNotifications: true});
-                            }
-                        });
-                    }
-                } catch (e) {}
-                
-                // Save the new state so we don't loop endlessly
-                lastKnownValue = hiddenInput1.value;
-            }
-        }, 200); // Checks every 200 milliseconds
+        // --- 2. Teacher Helper: Clean Copy Box ---
+        // This creates a dedicated, perfectly formatted box for the teacher to copy from
+        let teacherBox = document.getElementById('teacher-box');
+        if (!teacherBox) {
+            teacherBox = document.createElement('div');
+            teacherBox.id = 'teacher-box';
+            teacherBox.style.padding = "10px";
+            teacherBox.style.marginTop = "20px";
+            teacherBox.style.backgroundColor = "#e8f4f8";
+            teacherBox.style.border = "2px dashed #007bb5";
+            teacherBox.style.fontFamily = "monospace";
+            teacherBox.style.whiteSpace = "pre-wrap";
+            
+            // Put it right under the math boxes
+            let targetContainer = document.getElementById('palette-title') ? document.getElementById('palette-title').parentNode : document.body;
+            targetContainer.appendChild(teacherBox);
+        }
 
+        function updateTeacherBox() {
+            // Grab the clean math directly from MathLive
+            let currentAnswers = mfs.map(mf => mf.element.getValue());
+            
+            // Format it perfectly for Maxima (forces exactly two backslashes)
+            let maximaString = '["' + currentAnswers.join('", "') + '"]';
+            maximaString = maximaString.replace(/\\/g, '\\\\');
+            
+            // Display it on the screen
+            teacherBox.innerText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\nta: " + maximaString + ";";
+        }
+
+        // Keep it updated whenever the teacher types or clicks "Fill correct responses"
+        mfs.forEach(mfObj => mfObj.element.addEventListener('input', updateTeacherBox));
+        setInterval(updateTeacherBox, 500);
         // --- VISUAL MARKING (If Submitted) ---
         if (isLocked) {
             btnContainer.style.pointerEvents = "none"; 
