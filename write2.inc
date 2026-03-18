@@ -327,27 +327,34 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 }
             });
         }
-// --- 7. Teacher Helper: Clean Copy Box (Cross-Boundary Copy) ---
+// --- 7. Teacher Helper: Clean Copy Box (Highlight-Friendly) ---
 function updateTeacherBox() {
-    const parentDoc = window.parent.document;
-    const teacherBox = parentDoc.getElementById('teacher-box');
-    
+    const teacherBox = window.parent.document.getElementById('teacher-box');
     if (!teacherBox) return;
 
-    // 1. Collect and format the values
+    // 1. Collect values
     let currentAnswers = mfs.map(mf => mf.element.getValue());
+    
+    // 2. Format for Maxima
     let maximaArray = '["' + currentAnswers.join('", "') + '"]';
     maximaArray = maximaArray.replace(/\\/g, '\\\\');
-    const finalCode = "ta: " + maximaArray + ";";
+    const newText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\n\n" + "ta: " + maximaArray + ";";
 
-    // 2. Inject the formatted text
-    teacherBox.innerText = finalCode;
+    // 3. ONLY update if the text has actually changed!
+    // This prevents the "refresh" from killing your mouse highlight.
+    if (teacherBox.innerText !== newText) {
+        teacherBox.innerText = newText;
+    }
 }
 
-// Sync it up
-mfs.forEach(mfObj => mfObj.element.addEventListener('input', updateTeacherBox));
-setInterval(updateTeacherBox, 500);
-    });
+// 4. Update ONLY on input (when someone types)
+mfs.forEach(mfObj => {
+    mfObj.element.addEventListener('input', updateTeacherBox);
+});
+
+// REMOVE the setInterval line entirely! 
+// It was the "hammer" causing the problem.
+});
 });
 [[/script]]
 [[/iframe]]</div>
