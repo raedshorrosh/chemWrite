@@ -1,4 +1,3 @@
-100
 <div><br class="Apple-interchange-newline">[[iframe width="100%" height="450px"]]<br><br>[[script src="https://unpkg.com/mathlive"]][[/script]]<br>[[style]]
     /* This targets BOTH the keyboard icon and the menu icon */
     math-field::part(virtual-keyboard-toggle),
