@@ -35,14 +35,17 @@ function getStackData(id) {
     let el = document.getElementById(id);
     if (!el) return null;
     let txt = el.innerText || el.textContent;
-    // If STACK failed to compile, it leaves the raw tag. We ignore it.
     if (txt.includes('{#')) return null; 
     return txt.trim();
 }
 
 try {
     let customTitle = getStackData('data-title');
-    if (customTitle) document.getElementById('palette-title').innerText = customTitle;
+    if (customTitle) {
+        // Remove extra quotes if STACK added them
+        customTitle = customTitle.replace(/^"|"$/g, ''); 
+        document.getElementById('palette-title').innerText = customTitle;
+    }
 } catch (e) {}
 
 let tas = [];
@@ -51,25 +54,32 @@ let titles = [];
 let texs = [];
 let partialCredit = 0.5;
 
-try { 
-    let tData = getStackData('data-tas');
-    if (tData) tas = JSON.parse(tData); 
-} catch (e) { console.error("Error parsing js_tas array"); }
+// Safely unpack data, handling STACK's extra quotes
+function parseStackJSON(id, fallback) {
+    try {
+        let rawData = getStackData(id);
+        if (!rawData) return fallback;
+        
+        let parsed = JSON.parse(rawData);
+        // If STACK double-quoted it, it will parse as a string. Parse it again!
+        if (typeof parsed === 'string') {
+            parsed = JSON.parse(parsed);
+        }
+        
+        // Force it to be an array just to be perfectly safe
+        if (!Array.isArray(parsed)) parsed = [parsed];
+        return parsed;
+        
+    } catch (e) {
+        console.warn("Could not parse " + id, e);
+        return fallback;
+    }
+}
 
-try { 
-    let pData = getStackData('data-prefixes');
-    if (pData) prefixes = JSON.parse(pData); 
-} catch (e) {}
-
-try { 
-    let titleData = getStackData('data-titles');
-    if (titleData) titles = JSON.parse(titleData); 
-} catch (e) {}
-
-try { 
-    let texData = getStackData('data-tex');
-    if (texData) texs = JSON.parse(texData); 
-} catch (e) { console.error("Error parsing js_tex array"); }
+tas = parseStackJSON('data-tas', []);
+prefixes = parseStackJSON('data-prefixes', []);
+titles = parseStackJSON('data-titles', []);
+texs = parseStackJSON('data-tex', []);
 
 try {
     let parsedPartial = parseFloat(getStackData('data-partial'));
