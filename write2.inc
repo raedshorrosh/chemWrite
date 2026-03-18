@@ -285,17 +285,48 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 if (Array.isArray(parsed)) savedAnswers = parsed;
             } catch(e) {}
         }
+       // --- 1. Load the boxes normally ---
         mfs.forEach((mfObj, index) => {
             if (savedAnswers[index]) {
-                mfObj.element.setValue(savedAnswers[index].replace(/\\\\/g, '\\'), {suppressChangeNotifications: true});
+                mfObj.element.setValue(savedAnswers[index].replace(/\\+/g, '\\'), {suppressChangeNotifications: true});
             } else if (prefixes[index]) {
-                mfObj.element.setValue(prefixes[index].replace(/\\\\/g, '\\'), {suppressChangeNotifications: true});
+                mfObj.element.setValue(prefixes[index].replace(/\\+/g, '\\'), {suppressChangeNotifications: true});
             }
             mfObj.element.addEventListener('input', evaluateStudent);
         });
-        evaluateStudent();
 
         if (!isLocked) evaluateStudent();
+
+        // --- 2. The Watcher: Cleans up Moodle's "Fill Responses" button ---
+        let lastKnownValue = hiddenInput1.value;
+        setInterval(() => {
+            // Did Moodle or the user change the box?
+            if (hiddenInput1.value !== lastKnownValue) {
+                let newVal = hiddenInput1.value;
+                
+                // If Moodle injected 4 backslashes (\\\\), instantly crush them to 2 (\\)
+                if (newVal.includes('\\\\\\\\')) {
+                    newVal = newVal.replace(/\\\\\\\\/g, '\\\\');
+                    hiddenInput1.value = newVal; // Overwrite the ugly text with clean text
+                }
+                
+                // Force MathLive to render the newly injected answers
+                try {
+                    let parsed = JSON.parse(newVal);
+                    if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+                    if (Array.isArray(parsed)) {
+                        mfs.forEach((mfObj, index) => {
+                            if (parsed[index]) {
+                                mfObj.element.setValue(parsed[index].replace(/\\+/g, '\\'), {suppressChangeNotifications: true});
+                            }
+                        });
+                    }
+                } catch (e) {}
+                
+                // Save the new state so we don't loop endlessly
+                lastKnownValue = hiddenInput1.value;
+            }
+        }, 200); // Checks every 200 milliseconds
 
         // --- VISUAL MARKING (If Submitted) ---
         if (isLocked) {
