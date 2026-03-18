@@ -349,8 +349,14 @@ function updateTeacherBox() {
 
 // 4. Update ONLY on input (when someone types)
 mfs.forEach(mfObj => {
-    mfObj.element.addEventListener('input', updateTeacherBox);
+    mfObj.element.addEventListener('input', () => {
+        evaluateStudent();   // This saves the answer to STACK
+        updateTeacherBox();  // This updates your blue box
+    });
 });
+
+// Run once on load
+updateTeacherBox();
 
 // REMOVE the setInterval line entirely! 
 // It was the "hammer" causing the problem.
