@@ -297,25 +297,12 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
 
         if (!isLocked) evaluateStudent();
 
-        // --- 2. Teacher Helper: Clean Copy Box ---
-        // This creates a dedicated, perfectly formatted box for the teacher to copy from
+    // --- 2. Teacher Helper: Inject clean code into the HTML panel ---
         let teacherBox = document.getElementById('teacher-box');
-        if (!teacherBox) {
-            teacherBox = document.createElement('div');
-            teacherBox.id = 'teacher-box';
-            teacherBox.style.padding = "10px";
-            teacherBox.style.marginTop = "20px";
-            teacherBox.style.backgroundColor = "#e8f4f8";
-            teacherBox.style.border = "2px dashed #007bb5";
-            teacherBox.style.fontFamily = "monospace";
-            teacherBox.style.whiteSpace = "pre-wrap";
-            
-            // Put it right under the math boxes
-            let targetContainer = document.getElementById('palette-title') ? document.getElementById('palette-title').parentNode : document.body;
-            targetContainer.appendChild(teacherBox);
-        }
 
         function updateTeacherBox() {
+            if (!teacherBox) return; // Safety check in case the panel is hidden/missing
+            
             // Grab the clean math directly from MathLive
             let currentAnswers = mfs.map(mf => mf.element.getValue());
             
@@ -323,13 +310,14 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             let maximaString = '["' + currentAnswers.join('", "') + '"]';
             maximaString = maximaString.replace(/\\/g, '\\\\');
             
-            // Display it on the screen
+            // Inject it directly into the HTML panel
             teacherBox.innerText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\nta: " + maximaString + ";";
         }
 
-        // Keep it updated whenever the teacher types or clicks "Fill correct responses"
+        // Keep it updated whenever you type or click "Fill correct responses"
         mfs.forEach(mfObj => mfObj.element.addEventListener('input', updateTeacherBox));
         setInterval(updateTeacherBox, 500);
+
         // --- VISUAL MARKING (If Submitted) ---
         if (isLocked) {
             btnContainer.style.pointerEvents = "none"; 
