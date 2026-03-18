@@ -328,43 +328,39 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             });
         }
 // --- 7. Teacher Helper: Clean Copy Box ---
-        let teacherBox = document.getElementById('teacher-box');
-        if (!teacherBox) {
-            teacherBox = document.createElement('div');
-            teacherBox.id = 'teacher-box';
-            teacherBox.style.padding = "10px";
-            teacherBox.style.marginTop = "20px";
-            teacherBox.style.backgroundColor = "#e8f4f8";
-            teacherBox.style.border = "2px dashed #007bb5";
-            teacherBox.style.fontFamily = "monospace";
-            teacherBox.style.whiteSpace = "pre-wrap";
-            
-            // Put it right under the math boxes inside the iframe
-            document.getElementById('mathfields-container').parentNode.appendChild(teacherBox);
-        }
+const teacherBox = document.getElementById('teacher-box');
+const debugStatus = getStackData('data-debug');
 
-        // Grab the debug status that we snuck into the iframe
-        let debugStatus = getStackData('data-debug');
+function updateTeacherBox() {
+    // If the box doesn't exist or Maxima says "none", do nothing
+    if (!teacherBox || debugStatus === 'none') return;
 
-        function updateTeacherBox() {
-            // If Maxima says "none", kill the blue box immediately and stop running
-            if (debugStatus === 'none') {
-                teacherBox.style.display = 'none';
-                return; 
-            }
+    // 1. Collect all MathLive values
+    let currentAnswers = mfs.map(mf => mf.element.getValue());
 
-            // Otherwise, build the box!
-            teacherBox.style.display = 'block';
-            
-            let currentAnswers = mfs.map(mf => mf.element.getValue());
-            let maximaString = '["' + currentAnswers.join('", "') + '"]';
-            maximaString = maximaString.replace(/\\/g, '\\\\');
-            
-            teacherBox.innerText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\nta: " + maximaString + ";";
-        }
+    // 2. Format the array for Maxima (escaping backslashes)
+    let maximaArray = '["' + currentAnswers.join('", "') + '"]';
+    maximaArray = maximaArray.replace(/\\/g, '\\\\');
 
-        mfs.forEach(mfObj => mfObj.element.addEventListener('input', updateTeacherBox));
-        setInterval(updateTeacherBox, 500);
+    // 3. Create the final string with 'ta:' on its own line
+    const finalCode = "ta: " + maximaArray + ";";
+
+    // 4. Update the display
+    teacherBox.innerText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\n\n" + finalCode;
+
+    // 5. One-click copy logic
+    teacherBox.onclick = () => {
+        navigator.clipboard.writeText(finalCode);
+        // Visual feedback
+        const originalText = teacherBox.innerText;
+        teacherBox.innerText = "✅ COPIED TO CLIPBOARD!";
+        setTimeout(() => { teacherBox.innerText = originalText; }, 1000);
+    };
+}
+
+// Keep it in sync
+mfs.forEach(mfObj => mfObj.element.addEventListener('input', updateTeacherBox));
+setInterval(updateTeacherBox, 500);
     });
 });
 [[/script]]
