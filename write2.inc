@@ -1,3 +1,4 @@
+100
 <div><br class="Apple-interchange-newline">[[iframe width="100%" height="450px"]]<br><br>[[script src="https://unpkg.com/mathlive"]][[/script]]<br>[[style]]
     /* This targets BOTH the keyboard icon and the menu icon */
     math-field::part(virtual-keyboard-toggle),
@@ -297,11 +298,12 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
 
         if (!isLocked) evaluateStudent();
 
-    // --- 2. Teacher Helper: Inject clean code into the HTML panel ---
-        let teacherBox = document.getElementById('teacher-box');
-
+// --- 2. Teacher Helper: Inject clean code into the HTML panel ---
         function updateTeacherBox() {
-            if (!teacherBox) return; // Safety check in case the panel is hidden/missing
+            // Moved INSIDE the function so it continually searches until the page loads
+            let teacherBox = document.getElementById('teacher-box');
+            
+            if (!teacherBox) return; // If not found yet, wait and try again
             
             // Grab the clean math directly from MathLive
             let currentAnswers = mfs.map(mf => mf.element.getValue());
