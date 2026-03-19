@@ -178,11 +178,12 @@ tas.forEach((ta, index) => {
 // Add title if exists
     if (titles[index]) {
         const label = document.createElement('label');
-        label.style.cssText = "font-weight: bold; color: #4338ca; margin-bottom: 8px; display: block;";
+        // --- UPDATED: Added direction and text-align ---
+        label.style.cssText = "font-weight: bold; color: #4338ca; margin-bottom: 8px; display: block; direction: rtl; text-align: left;";
         label.innerHTML = titles[index];
         wrapper.appendChild(label);
         
-        // --- NEW: Tell MathLive to render the \( \) or $$ $$ math ---
+        // Tell MathLive to render the \( \) or $$ $$ math
         if (window.MathLive) {
             MathLive.renderMathInElement(label);
         }
