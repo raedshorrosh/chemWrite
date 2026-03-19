@@ -1,8 +1,10 @@
-<div><br class="Apple-interchange-newline">[[iframe width="100%" height="450px"]]<br><br>[[script src="https://unpkg.com/mathlive"]][[/script]]<br>[[style]]
+[[iframe width="100%" height="450px"]]
+[[script src="https://unpkg.com/mathlive"]][[/script]]
+[[style]]
     /* This targets BOTH the keyboard icon and the menu icon */
     math-field::part(virtual-keyboard-toggle),
     math-field::part(menu-toggle) {
-      display: none !important;
+        display: none !important;
     }
 [[/style]]
 
@@ -25,7 +27,7 @@
     </div>
     
     <div id="mathfields-container" style="display: flex; flex-direction: column; gap: 15px;">
-        </div>
+    </div>
 </div>
 
 [[script type="module"]]
@@ -277,7 +279,7 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             }
         }
 
-      let savedAnswers = [];
+        let savedAnswers = [];
         if (hiddenInput1.value && hiddenInput1.value.trim() !== "") {
             try { 
                 let parsed = JSON.parse(hiddenInput1.value);
@@ -286,7 +288,8 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 if (Array.isArray(parsed)) savedAnswers = parsed;
             } catch(e) {}
         }
-// --- 1. Load the boxes normally & Set up Listeners ---
+
+        // --- 1. Load the boxes normally & Set up Listeners ---
         mfs.forEach((mfObj, index) => {
             // Load saved data or prefixes
             if (savedAnswers[index]) {
@@ -353,6 +356,5 @@ function updateTeacherBox() {
         teacherBox.innerText = newText;
     }
 }
-// Note: We removed the extra }); }); that were here.
 [[/script]]
-[[/iframe]]</div>
+[[/iframe]]
