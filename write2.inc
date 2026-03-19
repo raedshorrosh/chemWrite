@@ -174,10 +174,9 @@ tas.forEach((ta, index) => {
     const wrapper = document.createElement('div');
     wrapper.style.cssText = "border: 1px solid #ced4da; padding: 15px; border-radius: 4px; background: white; display: flex; flex-direction: column; position: relative;";
     
-// Add title if exists
+    // Add title if exists
     if (titles[index]) {
         const label = document.createElement('label');
-        // --- UPDATED: Added direction and text-align ---
         label.style.cssText = "font-weight: bold; color: #4338ca; margin-bottom: 8px; display: block; direction: rtl; text-align: right;";
         label.innerHTML = titles[index];
         wrapper.appendChild(label);
@@ -194,24 +193,39 @@ tas.forEach((ta, index) => {
     
     // Create Mathfield
     const mf = document.createElement('math-field');
-// I just added 'transition: all 0.2s ease;' to the end of your existing cssText
-mf.style.cssText = "width: 100%; font-size: 1.2em; background-color: #ffffff; border: 2px solid #4338ca; border-radius: 8px; padding: 6px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
-  // Update tracker on focus and move the toolbar ABOVE the entire question box
-  mf.addEventListener('focusin', () => {
-    activeMathField = mf;
+    mf.style.cssText = "width: 100%; font-size: 1.2em; background-color: #ffffff; border: 2px solid #4338ca; border-radius: 8px; padding: 6px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
     
-    // Add a soft blue glowing ring to the active box
-    mf.style.boxShadow = "0 0 0 4px rgba(67, 56, 202, 0.2)";
-    
-    const palette = document.getElementById('button-palette');
-    if (palette && wrapper.parentNode) {
-        wrapper.parentNode.insertBefore(palette, wrapper);
-    }
-});
-mf.addEventListener('focusout', () => {
-    // Return the shadow back to your default subtle drop-shadow
-    mf.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
-});
+    // Update tracker on focus and move the toolbar ABOVE the entire question box
+    mf.addEventListener('focusin', () => {
+        activeMathField = mf;
+        
+        // Add a soft blue glowing ring to the active box
+        mf.style.boxShadow = "0 0 0 4px rgba(67, 56, 202, 0.2)";
+        
+        const palette = document.getElementById('button-palette');
+        if (palette && wrapper.parentNode) {
+            wrapper.parentNode.insertBefore(palette, wrapper);
+        }
+    });
+
+    // Remove glow when leaving
+    mf.addEventListener('focusout', () => {
+        mf.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
+    });
+
+    // --- THE DEBOUNCE TIMER & SYNC ---
+    let debounceTimer;
+    mf.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            // Push the final LaTeX to the hidden Moodle textarea
+            ta.value = mf.getValue('latex'); 
+            // Force Moodle to recognize the change
+            ta.dispatchEvent(new Event('change', { bubbles: true }));
+        }, 500); 
+    });
+    // ---------------------------------
+
     mfRow.appendChild(mf);
     wrapper.appendChild(mfRow);
     container.appendChild(wrapper);
@@ -220,7 +234,6 @@ mf.addEventListener('focusout', () => {
 
 // Default active to the first field
 if (mfs.length > 0) { activeMathField = mfs[0].element; }
-
 // --- 5. Build Preset Buttons ---
 for (let i = 0; i < texs.length; i++) {
     let displayTex = Array.isArray(texs[i]) ? texs[i][0] : texs[i];
