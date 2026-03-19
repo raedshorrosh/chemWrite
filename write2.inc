@@ -225,7 +225,18 @@ for (let i = 0; i < texs.length; i++) {
     
     const btn = document.createElement('div');
     btn.style.cssText = "position: relative; cursor: pointer; width: 85px; height: 45px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; user-select: none; transition: all 0.2s;";
+
+   // --- Add these hover effects right after your btn.style.cssText ---
+    btn.addEventListener('mouseenter', () => {
+        btn.style.backgroundColor = '#e2e6ea'; // Slightly darker gray
+        btn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; // Optional subtle shadow
+    });
     
+    btn.addEventListener('mouseleave', () => {
+        btn.style.backgroundColor = '#f8f9fa'; // Back to original color
+        btn.style.boxShadow = 'none'; // Remove shadow
+    });
+
    // Use a standard text span with LaTeX delimiters instead of a heavy math-field
     const mathHtml = `<span style="font-size: 1.2em; color: black; pointer-events: none;">\\( ${displayTex} \\)</span>`;
     const overlayHtml = `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 100;"></div>`;
