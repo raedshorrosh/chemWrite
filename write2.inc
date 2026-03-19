@@ -18,7 +18,7 @@
 </div>
 
 <div style="font-family: sans-serif; padding: 10px; box-sizing: border-box;">
-    <div id="button-palette" style="background: white; border: 1px solid #ced4da; border-radius: 6px; margin-bottom: 25px; overflow: hidden; width: fit-content; max-width: 100%;">
+    <div id="button-palette" style="background: white; border: 1px solid #ced4da; border-radius: 6px; margin-bottom: 5px; overflow: hidden; width: fit-content; max-width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
         <div id="palette-title" style="padding: 8px 12px; background: #e9ecef; border-bottom: 1px solid #ced4da; font-weight: bold; font-size: 0.85em; color: #495057;">
             Symbols & Templates
         </div>
@@ -196,9 +196,17 @@ tas.forEach((ta, index) => {
     const mf = document.createElement('math-field');
     mf.style.cssText = "width: 100%; font-size: 1.2em; background-color: #ffffff; border: 2px solid #4338ca; border-radius: 8px; padding: 6px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05);";
     
-    // Update tracker on focus
+   // Update tracker on focus and move the toolbar
     mf.addEventListener('focusin', () => {
         activeMathField = mf;
+        
+        // 1. Grab the toolbar
+        const palette = document.getElementById('button-palette');
+        
+        // 2. Move it inside this specific question's wrapper, right above the math input row
+        if (palette) {
+            wrapper.insertBefore(palette, mfRow);
+        }
     });
     
     mfRow.appendChild(mf);
