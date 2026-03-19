@@ -20,7 +20,7 @@
 <div style="font-family: sans-serif; padding: 10px; box-sizing: border-box;">
     <div id="button-palette" style="background: white; border: 1px solid #ced4da; border-radius: 6px; margin-bottom: 5px; overflow: hidden; width: fit-content; max-width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
         <div id="palette-title" style="padding: 8px 12px; background: #e9ecef; border-bottom: 1px solid #ced4da; font-weight: bold; font-size: 0.85em; color: #495057;">
-         [[jsstring]]{@js_title@}[[/jsstring]]
+          Symbols & Templates
         </div>
         <div id="preset-buttons-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px;"></div>
     </div>
@@ -31,6 +31,10 @@
 
 [[script type="module"]]
 import {stack_js} from '[[cors src="stackjsiframe.js"/]]';
+try {
+    let customTitle = {#js_title#};
+    if (customTitle) document.getElementById('palette-title').innerText = customTitle;
+} catch (e) { console.log("No custom title provided."); }
 
 // --- 1. Parse Maxima Variables Safely ---
 function getStackData(id) {
