@@ -13,7 +13,6 @@
     <div id="data-prefixes">{#js_prefixes#}</div>
     <div id="data-titles">{#js_titles#}</div>
     <div id="data-tex">{#js_tex#}</div>
-    <div id="data-title">{#js_title#}</div>
     <div id="data-partial">{#js_partial_credit#}</div>
     <div id="data-debug">{#debug_display#}</div> 
 </div>
