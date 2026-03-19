@@ -356,5 +356,33 @@ function updateTeacherBox() {
         teacherBox.innerText = newText;
     }
 }
+// --- 8. Auto-Resize iFrame ---
+function autoResize() {
+    try {
+        // FRAME_ID is a hidden variable automatically created by STACK
+        const parentIframe = window.parent.document.getElementById(FRAME_ID);
+        // STACK also wraps the iframe in a holder div we need to expand
+        const parentHolder = window.parent.document.getElementById(FRAME_ID.replace('stack-iframe', 'stack-iframe-holder'));
+        
+        if (parentIframe && parentHolder) {
+            // Calculate the total height of the content plus a little extra padding
+            const newHeight = (document.body.scrollHeight + 20) + 'px';
+            
+            parentIframe.style.height = newHeight;
+            parentHolder.style.height = newHeight;
+        }
+    } catch (e) {
+        console.warn("Could not auto-resize iframe:", e);
+    }
+}
+
+// Run once immediately
+autoResize();
+
+// Keep watching the body for any size changes (like wrapping text or opening menus)
+const resizeObserver = new ResizeObserver(() => {
+    autoResize();
+});
+resizeObserver.observe(document.body);
 [[/script]]
 [[/iframe]]
