@@ -194,21 +194,24 @@ tas.forEach((ta, index) => {
     
     // Create Mathfield
     const mf = document.createElement('math-field');
-    mf.style.cssText = "width: 100%; font-size: 1.2em; background-color: #ffffff; border: 2px solid #4338ca; border-radius: 8px; padding: 6px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05);";
-    
+// I just added 'transition: all 0.2s ease;' to the end of your existing cssText
+mf.style.cssText = "width: 100%; font-size: 1.2em; background-color: #ffffff; border: 2px solid #4338ca; border-radius: 8px; padding: 6px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
   // Update tracker on focus and move the toolbar ABOVE the entire question box
-    mf.addEventListener('focusin', () => {
-        activeMathField = mf;
-        
-        // 1. Grab the toolbar
-        const palette = document.getElementById('button-palette');
-        
-        // 2. Move it OUTSIDE the wrapper, placing it right before this question
-        if (palette && wrapper.parentNode) {
-            wrapper.parentNode.insertBefore(palette, wrapper);
-        }
-    });
+  mf.addEventListener('focusin', () => {
+    activeMathField = mf;
     
+    // Add a soft blue glowing ring to the active box
+    mf.style.boxShadow = "0 0 0 4px rgba(67, 56, 202, 0.2)";
+    
+    const palette = document.getElementById('button-palette');
+    if (palette && wrapper.parentNode) {
+        wrapper.parentNode.insertBefore(palette, wrapper);
+    }
+});
+mf.addEventListener('focusout', () => {
+    // Return the shadow back to your default subtle drop-shadow
+    mf.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
+});
     mfRow.appendChild(mf);
     wrapper.appendChild(mfRow);
     container.appendChild(wrapper);
