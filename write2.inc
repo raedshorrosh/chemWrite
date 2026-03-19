@@ -175,22 +175,16 @@ tas.forEach((ta, index) => {
     const wrapper = document.createElement('div');
     wrapper.style.cssText = "border: 1px solid #ced4da; padding: 15px; border-radius: 4px; background: white; display: flex; flex-direction: column; position: relative;";
     
-  // Add title if exists
+// Add title if exists
     if (titles[index]) {
         const label = document.createElement('label');
         label.style.cssText = "font-weight: bold; color: #4338ca; margin-bottom: 8px; display: block;";
         label.innerHTML = titles[index];
         wrapper.appendChild(label);
         
-        // --- NEW: Tell Moodle's MathJax to render the injected LaTeX ---
-        if (window.MathJax) {
-            if (window.MathJax.typesetPromise) {
-                // For modern Moodle (MathJax 3)
-                window.MathJax.typesetPromise([label]).catch(() => {}); 
-            } else if (window.MathJax.Hub) {
-                // For older Moodle (MathJax 2)
-                window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub, label]); 
-            }
+        // --- NEW: Tell MathLive to render the \( \) or $$ $$ math ---
+        if (window.MathLive) {
+            MathLive.renderMathInElement(label);
         }
     }
     
