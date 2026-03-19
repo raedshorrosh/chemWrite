@@ -196,16 +196,16 @@ tas.forEach((ta, index) => {
     const mf = document.createElement('math-field');
     mf.style.cssText = "width: 100%; font-size: 1.2em; background-color: #ffffff; border: 2px solid #4338ca; border-radius: 8px; padding: 6px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05);";
     
-   // Update tracker on focus and move the toolbar
+  // Update tracker on focus and move the toolbar ABOVE the entire question box
     mf.addEventListener('focusin', () => {
         activeMathField = mf;
         
         // 1. Grab the toolbar
         const palette = document.getElementById('button-palette');
         
-        // 2. Move it inside this specific question's wrapper, right above the math input row
-        if (palette) {
-            wrapper.insertBefore(palette, mfRow);
+        // 2. Move it OUTSIDE the wrapper, placing it right before this question
+        if (palette && wrapper.parentNode) {
+            wrapper.parentNode.insertBefore(palette, wrapper);
         }
     });
     
