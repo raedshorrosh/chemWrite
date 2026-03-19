@@ -181,7 +181,7 @@ tas.forEach((ta, index) => {
     // Add title if exists
     if (titles[index]) {
         const label = document.createElement('label');
-        label.style.cssText = "font-weight: bold; color: #4338ca; margin-bottom: 8px; display: block; direction: rtl; text-align: right;";
+        label.style.cssText = "font-weight: bold; color: #212529; margin-bottom: 8px; display: block; direction: rtl; text-align: right;";
         label.innerHTML = titles[index];
         wrapper.appendChild(label);
         
