@@ -179,7 +179,7 @@ tas.forEach((ta, index) => {
     if (titles[index]) {
         const label = document.createElement('label');
         // --- UPDATED: Added direction and text-align ---
-        label.style.cssText = "font-weight: bold; color: #4338ca; margin-bottom: 8px; display: block; direction: rtl; text-align: left;";
+        label.style.cssText = "font-weight: bold; color: #4338ca; margin-bottom: 8px; display: block; direction: rtl; text-align: right;";
         label.innerHTML = titles[index];
         wrapper.appendChild(label);
         
