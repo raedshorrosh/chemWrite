@@ -194,7 +194,7 @@ tas.forEach((ta, index) => {
     
     // Create Mathfield
     const mf = document.createElement('math-field');
-    mf.style.cssText = "width: 100%; font-size: 1.2em;";
+    mf.style.cssText = "width: 100%; font-size: 1.2em; background-color: #ffffff; border: 2px solid #4338ca; border-radius: 8px; padding: 6px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05);";
     
     // Update tracker on focus
     mf.addEventListener('focusin', () => {
