@@ -190,23 +190,23 @@ tas.forEach((ta, index) => {
             MathLive.renderMathInElement(label);
         }
     }
-    
-    // Create Flex container for Mathfield + Icon
-    const mfRow = document.createElement('div');
-    mfRow.style.cssText = "display: flex; align-items: center; width: 100%;";
-    
-    // Create Mathfield
-    const mf = document.createElement('math-field');
-    mf.style.cssText = "width: 100%; font-size: 1.2em; background-color: #ffffff; border: 2px solid #4338ca; border-radius: 8px; padding: 6px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
-    
-    // Update tracker on focus and move the toolbar ABOVE the entire question box
-    mf.addEventListener('focusin', () => {
-        activeMathField = mf;
-        
-        // Add a soft blue glowing ring to the active box
-        mf.style.boxShadow = "0 0 0 4px rgba(67, 56, 202, 0.2)";
-        
-        const palette = document.getElementById('button-palette');
+        // Create Flex container for Mathfield + Icon
+    const mfRow = document.createElement('div');
+    mfRow.style.cssText = "display: flex; align-items: center; width: 100%;";
+    
+    // Create Mathfield
+    const mf = document.createElement('math-field');
+    mf.style.cssText = "width: 100%; font-size: 1.4em; background-color: #ffffff; border: 2px solid #93c5fd; border-radius: 8px; padding: 12px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
+    
+    // Update tracker on focus and move the toolbar ABOVE the entire question box
+    mf.addEventListener('focusin', () => {
+        activeMathField = mf;
+        
+        // Add a soft blue glowing ring to the active box (Matches #93c5fd)
+        mf.style.boxShadow = "0 0 0 4px rgba(147, 197, 253, 0.4)";
+        
+        const palette = document.getElementById('button-palette');
+
         if (palette && wrapper.parentNode) {
             wrapper.parentNode.insertBefore(palette, wrapper);
         }
