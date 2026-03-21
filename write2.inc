@@ -150,7 +150,7 @@ function processChem(latex) {
 
     let leftTerms = splitTerms(leftSide);
     let rightTerms = splitTerms(rightSide);
-
+/*
     function makeExact(terms) {
         return terms.map(t => {
             return t.replace(/\s+/g, '')
@@ -175,7 +175,43 @@ function processChem(latex) {
                     .toLowerCase();
         }).sort().join("+");
     }
+*/
+function makeExact(terms) {
+        return terms.map(t => {
+            return t.replace(/\s+/g, '')
+                    .replace(/\\left/g, '')
+                    .replace(/\\right/g, '')
+                    .replace(/[\{\}]/g, '')
+                    
+                    // EXPLICIT POSITIVE LOGIC
+                    .replace(/\^\+(\d+)/g, '^$1+') 
+                    .replace(/\^1\+/g, '^+')       
+                    
+                    // EXPLICIT NEGATIVE LOGIC
+                    .replace(/\^\-(\d+)/g, '^$1-') 
+                    .replace(/\^1\-/g, '^-')       
+                    
+                    .replace(/_\((s|l|g|aq)\)/gi, '($1)')
+                    .replace(/_+/g, '_');
+        }).sort().join("+");
+    }
 
+    function makeSloppy(terms) {
+        return terms.map(t => {
+            return t.replace(/[\{\}]/g, '')
+            
+                    // EXPLICIT POSITIVE & NEGATIVE LOGIC
+                    .replace(/\^\+(\d+)/g, '^$1+')
+                    .replace(/\^1\+/g, '^+')
+                    .replace(/\^\-(\d+)/g, '^$1-')
+                    .replace(/\^1\-/g, '^-')
+                    
+                    .replace(/\\[a-zA-Z]+/g, '')
+                    .replace(/[_^{}\(\)\[\]]/g, '')
+                    .replace(/\s+/g, '')
+                    .toLowerCase();
+        }).sort().join("+");
+    }
     let exactStr = makeExact(leftTerms) + theArrow + makeExact(rightTerms);
     let sloppyArrow = makeSloppy([theArrow]); 
     let sloppyStr = makeSloppy(leftTerms) + "ARROW" + sloppyArrow + "ARROW" + makeSloppy(rightTerms);
