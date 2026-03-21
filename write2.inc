@@ -130,7 +130,7 @@ function processChem(latex) {
     let rightSide = parts[2];
     let theArrow = parts[1].replace(/\s+/g, '').replace(/\{\}/g, ''); 
     
-    function splitTerms(sideStr) {
+/*    function splitTerms(sideStr) {
         let terms = [], currentTerm = "", depth = 0;
         for (let i = 0; i < sideStr.length; i++) {
             let char = sideStr[i];
@@ -147,7 +147,35 @@ function processChem(latex) {
         terms.push(currentTerm.trim());
         return terms.filter(t => t !== "");
     }
+*/
+function splitTerms(sideStr) {
+        let terms = [], currentTerm = "", depth = 0;
+      // --- THE FIXED VERSION ---
+for (let i = 0; i < sideStr.length; i++) {
+    let char = sideStr[i];
 
+    // We only track curly braces {} because they are the only 
+    // characters LaTeX uses to "hide" math like charges.
+    if (char === '{') {
+        depth++;
+    } else if (char === '}') {
+        // The Medicine: prevents negative depth from rogue arrow brackets
+        depth = Math.max(0, depth - 1);
+    }
+    
+    // Parentheses () and Brackets [] are now IGNORED. 
+    // This prevents (aq) from dropping the depth back to 0 too early.
+
+    if (char === '+' && depth === 0) {
+                terms.push(currentTerm.trim());
+                currentTerm = "";
+            } else {
+                currentTerm += char;
+            }
+        }
+        terms.push(currentTerm.trim());
+        return terms.filter(t => t !== "");
+    }
     let leftTerms = splitTerms(leftSide);
     let rightTerms = splitTerms(rightSide);
 /*
