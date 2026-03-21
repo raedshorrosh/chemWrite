@@ -6,6 +6,17 @@
     math-field::part(menu-toggle) {
         display: none !important;
     }
+#mathfields-container label {
+        background-color: #f4f8fa !important;
+        color: #0073a5 !important;
+        padding: 6px 16px !important;
+        border-radius: 20px !important; /* Gives it smooth, pill-shaped edges */
+        border: 1px solid #b8daff !important;
+        display: inline-block !important; /* Stops it from stretching across the screen */
+        width: fit-content !important;
+        margin-bottom: 12px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+    }
 [[/style]]
 
 <div style="display: none;">
