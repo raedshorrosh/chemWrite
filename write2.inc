@@ -297,16 +297,7 @@ tas.forEach((ta, index) => {
         mf.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
     });
 
-    // --- THE DEBOUNCE TIMER & SYNC ---
-    let debounceTimer;
-    mf.addEventListener('input', () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            // Push the final LaTeX to the hidden Moodle textarea
-            ta.value = mf.getValue('latex'); 
-            // Force Moodle to recognize the change
-            ta.dispatchEvent(new Event('change', { bubbles: true }));
-        }, 500); 
+    
     });
     // ---------------------------------
 
@@ -428,10 +419,14 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 mfObj.element.setValue(prefixes[index].replace(/\\+/g, '\\'), {suppressChangeNotifications: true});
             }
 
-            // ONE Listener: Saves to STACK AND updates Teacher Box
+           // ONE Listener: Saves to STACK AND updates Teacher Box (WITH DEBOUNCE)
+            let debounceTimer;
             mfObj.element.addEventListener('input', () => {
-                evaluateStudent();   
-                updateTeacherBox();  
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    evaluateStudent();   
+                    updateTeacherBox();  
+                }, 400); // Waits 400ms after the student stops typing
             });
         });
 
