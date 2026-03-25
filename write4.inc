@@ -1,4 +1,3 @@
-corrected
 [[iframe width="100%" height="450px"]]
 [[script src="https://unpkg.com/mathlive"]][[/script]]
 [[style]]
