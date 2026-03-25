@@ -1,4 +1,4 @@
-v=7 good was 4
+v=9 good was 4
 [[iframe width="100%" height="450px"]]
 [[script src="https://unpkg.com/mathlive"]][[/script]]
 [[style]]
@@ -220,7 +220,9 @@ tas.forEach((ta, index) => {
     mfRow.style.cssText = "display: flex; align-items: center; width: 100%;";
     
     const mf = document.createElement('math-field');
-    mf.style.cssText = "width: 100%; font-size: 1.4em; background-color: #ffffff; border: 2px solid #93c5fd; border-radius: 8px; padding: 12px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
+    mf.menuToggleVisibility = "hidden";
+    mf.virtualKeyboardToggleVisibility = "hidden";   
+    mf.style.cssText = "width: 100%; font-size: 1.4em; background-color: #ffffff; border: 2px solid #93c5fd; border-radius: 8px; padding: 12px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
     
     mf.addEventListener('focusin', () => {
         activeMathField = mf;
@@ -338,7 +340,7 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             });
             
             let newAnsStr = JSON.stringify(currentAnswers);
-            let newGradeStr = JSON.stringify([currentGrades, currentErrors]);
+            let newGradeStr = JSON.stringify(currentGrades);
             
             if (hiddenInput1.value !== newAnsStr) {
                 hiddenInput1.value = newAnsStr;
@@ -381,51 +383,73 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             updateTeacherBox();
         }
 
-        if (isLocked) {
-            btnContainer.style.pointerEvents = "none"; 
-            btnContainer.style.opacity = "0.6"; 
-            
-            let finalGrades = [];
-            let finalErrors = [];
-            
-            try { 
-                let parsedAns2 = JSON.parse(hiddenInput2.value);
-                if (Array.isArray(parsedAns2) && Array.isArray(parsedAns2[0])) {
-                    finalGrades = parsedAns2[0]; 
-                    finalErrors = parsedAns2[1] || [];
-                } else {
-                    finalGrades = parsedAns2; 
-                }
-            } catch(e) {}
-            
-            mfs.forEach((mfObj, index) => {
-                mfObj.element.readOnly = true; 
-                let grade = finalGrades[index];
-                let errorText = finalErrors[index];
-                
-                if (grade !== undefined && !isNaN(grade)) {
-                    const markIcon = document.createElement('div');
-                    markIcon.style.cssText = "margin-left: 15px; display: flex; align-items: center;";
-                    
-                    const svgCheck = `<svg viewBox="0 0 512 512" width="24" height="24" fill="#4caf50"><path d="M470.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L192 338.7 425.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>`;
-                    const svgAdjust = `<svg viewBox="0 0 512 512" width="24" height="24" fill="#ff9800"><path d="M256 0C114.6 0 0 114.6 0 256s114.6 256 256 256 256-114.6 256-256S397.4 0 256 0zM256 464c-114.7 0-208-93.3-208-208S141.3 48 256 48v416z"/></svg>`;
-                    const svgTimes = `<svg viewBox="0 0 320 512" width="24" height="24" fill="#f44336"><path d="M310.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L160 210.7 54.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L114.7 256 9.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 301.3 265.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L205.3 256 310.6 150.6z"/></svg>`;
-                    
-                    if (grade === 1) markIcon.innerHTML = svgCheck; 
-                    else if (grade > 0 && grade < 1) markIcon.innerHTML = svgAdjust; 
-                    else if (grade === 0) markIcon.innerHTML = svgTimes; 
-                    
-                    mfObj.row.appendChild(markIcon);
+       if (isLocked) {
+            btnContainer.style.pointerEvents = "none"; 
+            btnContainer.style.opacity = "0.6"; 
+            
+            let finalGrades = [];
+            
+            try { 
+                let parsedAns2 = JSON.parse(hiddenInput2.value);
+                if (typeof parsedAns2 === 'string') parsedAns2 = JSON.parse(parsedAns2);
+                finalGrades = Array.isArray(parsedAns2) ? parsedAns2 : [];
+            } catch(e) {}
+            
+            mfs.forEach((mfObj, index) => {
+                mfObj.element.readOnly = true; 
+                let grade = finalGrades[index];
+                
+                let errorText = "";
+                let rawLatex = mfObj.element.getValue("latex") || "";
+                
+                if (rawLatex.trim() !== "" && grade !== undefined && grade < 1) {
+                    let studentData = processChem(rawLatex);
+                    let tData = teacherDataArray[index];
+                    let currentInputErrors = [];
+                    let isUnbalanced = false;
+                    let isBadFormat = false;
 
-                    if (errorText && errorText !== "") {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.style.cssText = "color: #d32f2f; font-weight: bold; margin-top: 10px; direction: rtl; text-align: right; background-color: #ffebee; padding: 6px 12px; border-radius: 6px; border: 1px solid #ffcdd2; font-size: 0.95em;";
-                        errorDiv.innerHTML = errorText; // Use innerHTML so the line breaks work!
-                        mfObj.row.parentElement.appendChild(errorDiv);
-                    }
-                }
-            });
-        }
+                    if (studentData.exact !== tData.exact) {
+                        if (studentData.species === tData.species) {
+                            isUnbalanced = true;
+                        } else if (studentData.sloppy === tData.sloppy) {
+                            isBadFormat = true;
+                        } else if (studentData.superSloppy === tData.superSloppy) {
+                            isUnbalanced = true;
+                            isBadFormat = true;
+                        } else {
+                            currentInputErrors.push(errorMessages[2]);
+                        }
+
+                        if (isUnbalanced) currentInputErrors.push(errorMessages[0]);
+                        if (isBadFormat) currentInputErrors.push(errorMessages[1]);
+                    }
+                    errorText = currentInputErrors.join("<br>");
+                }
+                
+                if (grade !== undefined && !isNaN(grade)) {
+                    const markIcon = document.createElement('div');
+                    markIcon.style.cssText = "margin-left: 15px; display: flex; align-items: center;";
+                    
+                    const svgCheck = `<svg viewBox="0 0 512 512" width="24" height="24" fill="#4caf50"><path d="M470.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L192 338.7 425.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>`;
+                    const svgAdjust = `<svg viewBox="0 0 512 512" width="24" height="24" fill="#ff9800"><path d="M256 0C114.6 0 0 114.6 0 256s114.6 256 256 256 256-114.6 256-256S397.4 0 256 0zM256 464c-114.7 0-208-93.3-208-208S141.3 48 256 48v416z"/></svg>`;
+                    const svgTimes = `<svg viewBox="0 0 320 512" width="24" height="24" fill="#f44336"><path d="M310.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L160 210.7 54.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L114.7 256 9.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 301.3 265.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L205.3 256 310.6 150.6z"/></svg>`;
+                    
+                    if (grade === 1) markIcon.innerHTML = svgCheck; 
+                    else if (grade > 0 && grade < 1) markIcon.innerHTML = svgAdjust; 
+                    else if (grade === 0) markIcon.innerHTML = svgTimes; 
+                    
+                    mfObj.row.appendChild(markIcon);
+
+                    if (errorText && errorText !== "") {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.style.cssText = "color: #d32f2f; font-weight: bold; margin-top: 10px; direction: rtl; text-align: right; background-color: #ffebee; padding: 6px 12px; border-radius: 6px; border: 1px solid #ffcdd2; font-size: 0.95em;";
+                        errorDiv.innerHTML = errorText;
+                        mfObj.row.parentElement.appendChild(errorDiv);
+                    }
+                }
+            });
+        }
     }); 
 }); 
 
