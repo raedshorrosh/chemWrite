@@ -1,3 +1,4 @@
+v=3
 [[iframe width="100%" height="450px"]]
 [[script src="https://unpkg.com/mathlive"]][[/script]]
 [[style]]
@@ -111,7 +112,6 @@ try {
 } catch (e) {}
 
 let errorMessages = parseStackJSON('data-errors', []);
-console.log("Error Dictionary Loaded Successfully:", errorMessages);
 
 // --- 2. Initialize Shared Tracking Variables ---
 const btnContainer = document.getElementById('preset-buttons-container');
@@ -137,22 +137,10 @@ function processChem(latex) {
     
     function splitTerms(sideStr) {
         let terms = [], currentTerm = "", depth = 0;
-        // --- THE FIXED VERSION ---
         for (let i = 0; i < sideStr.length; i++) {
             let char = sideStr[i];
-
-            // We only track curly braces {} because they are the only 
-            // characters LaTeX uses to "hide" math like charges.
-            if (char === '{') {
-                depth++;
-            } else if (char === '}') {
-                // The Medicine: prevents negative depth from rogue arrow brackets
-                depth = Math.max(0, depth - 1);
-            }
-            
-            // Parentheses () and Brackets [] are now IGNORED. 
-            // This prevents (aq) from dropping the depth back to 0 too early.
-
+            if (char === '{') { depth++; } 
+            else if (char === '}') { depth = Math.max(0, depth - 1); }
             if (char === '+' && depth === 0) {
                 terms.push(currentTerm.trim());
                 currentTerm = "";
@@ -169,21 +157,10 @@ function processChem(latex) {
     function makeExact(terms) {
         return terms.map(t => {
             return t.replace(/\s+/g, '')
-                    .replace(/\\left/g, '')
-                    .replace(/\\right/g, '')
-                    .replace(/[\{\}]/g, '')
-                    
-                    // EXPLICIT POSITIVE LOGIC
-                    .replace(/\^\+(\d+)/g, '^$1+') 
-                    .replace(/\^1\+/g, '^+')       
-                    
-                    // EXPLICIT NEGATIVE LOGIC
-                    .replace(/\^\-(\d+)/g, '^$1-') 
-                    .replace(/\^1\-/g, '^-')       
-                    
-                    .replace(/_\((s|l|g|aq)\)/gi, '($1)')
-                    .replace(/_+/g, '_')
-                    // ONLY CHANGE: Added this line to strip leading 1
+                    .replace(/\\left/g, '').replace(/\\right/g, '').replace(/[\{\}]/g, '')
+                    .replace(/\^\+(\d+)/g, '^$1+').replace(/\^1\+/g, '^+')       
+                    .replace(/\^\-(\d+)/g, '^$1-').replace(/\^1\-/g, '^-')       
+                    .replace(/_\((s|l|g|aq)\)/gi, '($1)').replace(/_+/g, '_')
                     .replace(/^1(?=[a-zA-Z\\])/, ''); 
         }).sort().join("+");
     }
@@ -191,35 +168,20 @@ function processChem(latex) {
     function makeSloppy(terms) {
         return terms.map(t => {
             return t.replace(/[\{\}]/g, '')
-            
-                    // EXPLICIT POSITIVE & NEGATIVE LOGIC
-                    .replace(/\^\+(\d+)/g, '^$1+')
-                    .replace(/\^1\+/g, '^+')
-                    .replace(/\^\-(\d+)/g, '^$1-')
-                    .replace(/\^1\-/g, '^-')
-                    
-                    // ONLY CHANGE: Added this line to strip leading 1 before letters vanish
-                    .replace(/^1(?=[a-zA-Z\\])/, '')
-                    .replace(/\\[a-zA-Z]+/g, '')
-                    .replace(/[_^{}\(\)\[\]]/g, '')
-                    .replace(/\s+/g, '')
-                    .toLowerCase();
+                    .replace(/\^\+(\d+)/g, '^$1+').replace(/\^1\+/g, '^+')
+                    .replace(/\^\-(\d+)/g, '^$1-').replace(/\^1\-/g, '^-')
+                    .replace(/^1(?=[a-zA-Z\\])/, '').replace(/\\[a-zA-Z]+/g, '')
+                    .replace(/[_^{}\(\)\[\]]/g, '').replace(/\s+/g, '').toLowerCase();
         }).sort().join("+");
     }
 
-    // ONLY CHANGE: Added the makeSpecies function and updated the variables below it
     function makeSpecies(terms) {
         return terms.map(t => {
             let stripped = t.replace(/\s+/g, '').replace(/^[0-9]+/, ''); 
-            return stripped.replace(/\\left/g, '')
-                    .replace(/\\right/g, '')
-                    .replace(/[\{\}]/g, '')
-                    .replace(/\^\+(\d+)/g, '^$1+') 
-                    .replace(/\^1\+/g, '^+')       
-                    .replace(/\^\-(\d+)/g, '^$1-') 
-                    .replace(/\^1\-/g, '^-')       
-                    .replace(/_\((s|l|g|aq)\)/gi, '($1)')
-                    .replace(/_+/g, '_');
+            return stripped.replace(/\\left/g, '').replace(/\\right/g, '').replace(/[\{\}]/g, '')
+                    .replace(/\^\+(\d+)/g, '^$1+').replace(/\^1\+/g, '^+')       
+                    .replace(/\^\-(\d+)/g, '^$1-').replace(/\^1\-/g, '^-')       
+                    .replace(/_\((s|l|g|aq)\)/gi, '($1)').replace(/_+/g, '_');
         }).sort().join("+");
     }
 
@@ -228,62 +190,40 @@ function processChem(latex) {
     let sloppyStr = makeSloppy(leftTerms) + "ARROW" + sloppyArrow + "ARROW" + makeSloppy(rightTerms);
     let speciesStr = makeSpecies(leftTerms) + theArrow + makeSpecies(rightTerms);
 
-    let result = { exact: exactStr, sloppy: sloppyStr, species: speciesStr };
-    console.log("processChem output:", result);
-    return result;
+    return { exact: exactStr, sloppy: sloppyStr, species: speciesStr };
 }
 
-// Pre-calculate teacher data for all inputs
 let teacherDataArray = tas.map(ta => {
     let cleanTa = ta.replace(/^["']|["']$/g, '').replace(/\\\\/g, '\\');
     return processChem(cleanTa);
 });
+
 // --- 4. Build Dynamic Inputs ---
 tas.forEach((ta, index) => {
     const wrapper = document.createElement('div');
     wrapper.style.cssText = "border: 1px solid #ced4da; padding: 15px; border-radius: 4px; background: white; display: flex; flex-direction: column; position: relative;";
     
-    // Add title if exists
     if (titles[index]) {
         const label = document.createElement('label');
         label.style.cssText = "font-weight: bold; color: #212529; margin-bottom: 8px; display: block; direction: rtl; text-align: right;";
         label.innerHTML = titles[index];
         wrapper.appendChild(label);
-        
-        // Tell MathLive to render the \( \) or $$ $$ math
-        if (window.MathLive) {
-            MathLive.renderMathInElement(label);
-        }
+        if (window.MathLive) { MathLive.renderMathInElement(label); }
     }
-        // Create Flex container for Mathfield + Icon
-    const mfRow = document.createElement('div');
-    mfRow.style.cssText = "display: flex; align-items: center; width: 100%;";
-    
-    // Create Mathfield
-    const mf = document.createElement('math-field');
-    mf.style.cssText = "width: 100%; font-size: 1.4em; background-color: #ffffff; border: 2px solid #93c5fd; border-radius: 8px; padding: 12px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
-    
-    // Update tracker on focus and move the toolbar ABOVE the entire question box
-    mf.addEventListener('focusin', () => {
-        activeMathField = mf;
-        
-        // Add a soft blue glowing ring to the active box (Matches #93c5fd)
-        mf.style.boxShadow = "0 0 0 4px rgba(147, 197, 253, 0.4)";
-        
-        const palette = document.getElementById('button-palette');
-
-        if (palette && wrapper.parentNode) {
-            wrapper.parentNode.insertBefore(palette, wrapper);
-        }
+    const mfRow = document.createElement('div');
+    mfRow.style.cssText = "display: flex; align-items: center; width: 100%;";
+    
+    const mf = document.createElement('math-field');
+    mf.style.cssText = "width: 100%; font-size: 1.4em; background-color: #ffffff; border: 2px solid #93c5fd; border-radius: 8px; padding: 12px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
+    
+    mf.addEventListener('focusin', () => {
+        activeMathField = mf;
+        mf.style.boxShadow = "0 0 0 4px rgba(147, 197, 253, 0.4)";
+        const palette = document.getElementById('button-palette');
+        if (palette && wrapper.parentNode) { wrapper.parentNode.insertBefore(palette, wrapper); }
     });
 
-    // Remove glow when leaving
-    mf.addEventListener('focusout', () => {
-        mf.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
-    });
-
-
-    // ---------------------------------
+    mf.addEventListener('focusout', () => { mf.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)"; });
 
     mfRow.appendChild(mf);
     wrapper.appendChild(mfRow);
@@ -291,8 +231,8 @@ tas.forEach((ta, index) => {
     mfs.push({ element: mf, row: mfRow });
 });
 
-// Default active to the first field
 if (mfs.length > 0) { activeMathField = mfs[0].element; }
+
 // --- 5. Build Preset Buttons ---
 for (let i = 0; i < texs.length; i++) {
     let displayTex = Array.isArray(texs[i]) ? texs[i][0] : texs[i];
@@ -301,39 +241,27 @@ for (let i = 0; i < texs.length; i++) {
     const btn = document.createElement('div');
     btn.style.cssText = "position: relative; cursor: pointer; width: 85px; height: 45px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; user-select: none; transition: all 0.2s;";
 
-   // --- Add these hover effects right after your btn.style.cssText ---
     btn.addEventListener('mouseenter', () => {
-        btn.style.backgroundColor = '#e2e6ea'; // Slightly darker gray
-        btn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; // Optional subtle shadow
+        btn.style.backgroundColor = '#e2e6ea'; 
+        btn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; 
     });
-    
     btn.addEventListener('mouseleave', () => {
-        btn.style.backgroundColor = '#f8f9fa'; // Back to original color
-        btn.style.boxShadow = 'none'; // Remove shadow
+        btn.style.backgroundColor = '#f8f9fa'; 
+        btn.style.boxShadow = 'none'; 
     });
 
-   // Use a standard text span with LaTeX delimiters instead of a heavy math-field
     const mathHtml = `<span style="font-size: 1.2em; color: black; pointer-events: none;">\\( ${displayTex} \\)</span>`;
     const overlayHtml = `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 100;"></div>`;
-    
     btn.innerHTML = mathHtml + overlayHtml;
-    
-    // Tell MathLive to render this span as static, non-editable math
-    if (window.MathLive) {
-        MathLive.renderMathInElement(btn);
-    }
+    if (window.MathLive) { MathLive.renderMathInElement(btn); }
     
     btn.addEventListener('click', (e) => {
         e.preventDefault(); e.stopPropagation();
         if (!activeMathField) return; 
         
-        if (insertTex === "^") {
-            activeMathField.executeCommand("moveToSuperscript");
-        } else if (insertTex === "_") {
-            activeMathField.executeCommand("moveToSubscript");
-        } else {
-            activeMathField.insert(insertTex); 
-        }
+        if (insertTex === "^") { activeMathField.executeCommand("moveToSuperscript"); } 
+        else if (insertTex === "_") { activeMathField.executeCommand("moveToSubscript"); } 
+        else { activeMathField.insert(insertTex); }
         activeMathField.focus(); 
     });
     btnContainer.appendChild(btn);
@@ -354,25 +282,47 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             
             let currentAnswers = [];
             let currentGrades = [];
+            let currentErrors = [];
             
             mfs.forEach((mfObj, index) => {
-                let rawLatex = mfObj.element.getValue("latex");
+                let rawLatex = mfObj.element.getValue("latex") || "";
                 currentAnswers.push(rawLatex.replace(/\\/g, '\\\\'));
+                
+                if (rawLatex.trim() === '') {
+                    currentGrades.push(0);
+                    currentErrors.push("");
+                    return;
+                }
                 
                 let studentData = processChem(rawLatex);
                 let tData = teacherDataArray[index];
                 
+                let grade = 0;
+                let errorText = "";
+                
                 if (studentData.exact === tData.exact) {
-                    currentGrades.push(1);
+                    grade = 1;
+                    errorText = ""; 
+                } else if (studentData.species === tData.species) {
+                    grade = partialCredit;
+                    errorText = errorMessages[0] || "התגובה לא מאוזנת נכון"; 
                 } else if (studentData.sloppy === tData.sloppy) {
-                    currentGrades.push(partialCredit);
+                    grade = partialCredit;
+                    errorText = errorMessages[1] || "בעיות במצבי צבירה או פורמט";
                 } else {
-                    currentGrades.push(0);
+                    grade = 0;
+                    errorText = errorMessages[2] || "הנוסחה לא נכונה";
                 }
+                
+                currentGrades.push(grade);
+                currentErrors.push(errorText);
             });
             
             let newAnsStr = JSON.stringify(currentAnswers);
-            let newGradeStr = JSON.stringify(currentGrades);
+            let newGradeStr = JSON.stringify([currentGrades, currentErrors]);
+            
+            // LOUD CONSOLE LOG TO PROVE JS IS WORKING
+            console.log("🚀 PAYLOAD GOING TO STACK:", newGradeStr);
             
             if (hiddenInput1.value !== newAnsStr) {
                 hiddenInput1.value = newAnsStr;
@@ -388,33 +338,28 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
         if (hiddenInput1.value && hiddenInput1.value.trim() !== "") {
             try { 
                 let parsed = JSON.parse(hiddenInput1.value);
-                // If Moodle double-quoted the correct answer, unpack it again!
                 if (typeof parsed === 'string') parsed = JSON.parse(parsed);
                 if (Array.isArray(parsed)) savedAnswers = parsed;
             } catch(e) {}
         }
 
-        // --- 1. Load the boxes normally & Set up Listeners ---
         mfs.forEach((mfObj, index) => {
-            // Load saved data or prefixes
             if (savedAnswers[index]) {
                 mfObj.element.setValue(savedAnswers[index].replace(/\\+/g, '\\'), {suppressChangeNotifications: true});
             } else if (prefixes[index]) {
                 mfObj.element.setValue(prefixes[index].replace(/\\+/g, '\\'), {suppressChangeNotifications: true});
             }
 
-         // ONE Listener: Saves to STACK AND updates Teacher Box (WITH DEBOUNCE)
             let debounceTimer;
             mfObj.element.addEventListener('input', () => {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
                     evaluateStudent();   
                     updateTeacherBox();  
-                }, 400); // Waits 400ms after the student stops typing
+                }, 400); 
             });
         });
 
-        // Sync everything immediately on page load
         if (!isLocked) {
             evaluateStudent();
             updateTeacherBox();
@@ -426,13 +371,26 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             btnContainer.style.opacity = "0.6"; 
             
             let finalGrades = [];
-            try { finalGrades = JSON.parse(hiddenInput2.value); } catch(e) {}
+            let finalErrors = [];
+            
+            try { 
+                let parsedAns2 = JSON.parse(hiddenInput2.value);
+                console.log("👀 VISUAL MARKING READS THIS FROM MOODLE:", parsedAns2);
+                if (Array.isArray(parsedAns2) && Array.isArray(parsedAns2[0])) {
+                    finalGrades = parsedAns2[0]; 
+                    finalErrors = parsedAns2[1] || [];
+                } else {
+                    finalGrades = parsedAns2; 
+                }
+            } catch(e) {}
             
             mfs.forEach((mfObj, index) => {
                 mfObj.element.readOnly = true; 
                 let grade = finalGrades[index];
+                let errorText = finalErrors[index];
                 
                 if (grade !== undefined && !isNaN(grade)) {
+                    // 1. Draw the Check/X Icon
                     const markIcon = document.createElement('div');
                     markIcon.style.cssText = "margin-left: 15px; display: flex; align-items: center;";
                     
@@ -445,13 +403,20 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                     else if (grade === 0) markIcon.innerHTML = svgTimes; 
                     
                     mfObj.row.appendChild(markIcon);
+
+                    // 2. Draw the Hebrew Text Box!
+                    if (errorText && errorText !== "") {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.style.cssText = "color: #d32f2f; font-weight: bold; margin-top: 10px; direction: rtl; text-align: right; background-color: #ffebee; padding: 6px 12px; border-radius: 6px; border: 1px solid #ffcdd2; font-size: 0.95em;";
+                        errorDiv.innerText = errorText;
+                        mfObj.row.parentElement.appendChild(errorDiv);
+                    }
                 }
             });
         }
     }); // End of ans2 promise
 }); // End of ans1 promise
 
-// --- 7. Teacher Helper Function (Outside the promise to keep it clean) ---
 function updateTeacherBox() {
     const teacherBox = window.parent.document.getElementById('teacher-box');
     if (!teacherBox) return;
@@ -461,37 +426,23 @@ function updateTeacherBox() {
     maximaArray = maximaArray.replace(/\\/g, '\\\\');
     const newText = "👨‍🏫 Teacher Maxima Code (Copy & Paste):\n\n" + "ta: " + maximaArray + ";";
 
-    if (teacherBox.innerText !== newText) {
-        teacherBox.innerText = newText;
-    }
+    if (teacherBox.innerText !== newText) { teacherBox.innerText = newText; }
 }
-// --- 8. Auto-Resize iFrame ---
+
 function autoResize() {
     try {
-        // FRAME_ID is a hidden variable automatically created by STACK
         const parentIframe = window.parent.document.getElementById(FRAME_ID);
-        // STACK also wraps the iframe in a holder div we need to expand
         const parentHolder = window.parent.document.getElementById(FRAME_ID.replace('stack-iframe', 'stack-iframe-holder'));
-        
         if (parentIframe && parentHolder) {
-            // Calculate the total height of the content plus a little extra padding
             const newHeight = (document.body.scrollHeight + 20) + 'px';
-            
             parentIframe.style.height = newHeight;
             parentHolder.style.height = newHeight;
         }
-    } catch (e) {
-        console.warn("Could not auto-resize iframe:", e);
-    }
+    } catch (e) { }
 }
 
-// Run once immediately
 autoResize();
-
-// Keep watching the body for any size changes (like wrapping text or opening menus)
-const resizeObserver = new ResizeObserver(() => {
-    autoResize();
-});
+const resizeObserver = new ResizeObserver(() => { autoResize(); });
 resizeObserver.observe(document.body);
 [[/script]]
 [[/iframe]]
