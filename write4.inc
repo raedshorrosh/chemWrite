@@ -1,4 +1,4 @@
-fixing the mathfield style
+fixing the mathfield style2
 [[iframe width="100%" height="450px"]]
 [[script src="https://unpkg.com/mathlive"]][[/script]]
 [[style]]
@@ -262,9 +262,7 @@ tas.forEach((ta, index) => {
     wrapper.appendChild(mfRow);
     container.appendChild(wrapper);
     mfs.push({ element: mf, row: mfRow });
-    mf.menuItems = []; 
-    mf.mathVirtualKeyboardPolicy = "manual"; 
-       
+    
 });
 
 if (mfs.length > 0) { activeMathField = mfs[0].element; }
