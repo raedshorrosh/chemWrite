@@ -1,3 +1,4 @@
+fixing labels style
 [[iframe width="100%" height="450px"]]
 [[script src="https://unpkg.com/mathlive"]][[/script]]
 [[style]]
@@ -226,7 +227,7 @@ tas.forEach((ta, index) => {
     // Add corresponding title above the math-field
     if (titles[index]) {
         const label = document.createElement('label');
-        label.style.cssText = "font-weight: bold; color: #212529; margin-bottom: 8px; display: block; direction: rtl; text-align: right;";
+        label.style.cssText = "background-color: #f4f8fa; color: #0073a5; padding: 6px 16px; border-radius: 20px; border: 1px solid #b8daff; display: inline-block; width: fit-content; margin-bottom: 12px; margin-left: auto; margin-right: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 1.1em; text-align: right; direction: rtl; font-weight: bold;";
         label.innerHTML = titles[index];
         wrapper.appendChild(label);
         if (window.MathLive) { MathLive.renderMathInElement(label); }
