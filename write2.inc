@@ -1,5 +1,5 @@
 [[iframe width="100%" height="450px"]]
-[[script src="https://unpkg.com/mathlive@0.108.1"]][[/script]]
+[[script src="https://unpkg.com/mathlive"]][[/script]]
 [[style]]
     /* This targets BOTH the keyboard icon and the menu icon */
     math-field::part(virtual-keyboard-toggle),
