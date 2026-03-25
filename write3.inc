@@ -1,8 +1,7 @@
-v=3
+v=4
 [[iframe width="100%" height="450px"]]
 [[script src="https://unpkg.com/mathlive"]][[/script]]
 [[style]]
-    /* This targets BOTH the keyboard icon and the menu icon */
     math-field::part(virtual-keyboard-toggle),
     math-field::part(menu-toggle) {
         display: none !important;
@@ -21,7 +20,7 @@ v=3
         box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
         font-size: 1.1em !important;
         text-align: right !important;
-        direction: rtl !important; /* <-- Adds absolute RTL enforcement */
+        direction: rtl !important; 
     }
 [[/style]]
 
@@ -54,7 +53,6 @@ try {
     if (customTitle) document.getElementById('palette-title').innerText = customTitle;
 } catch (e) { console.log("No custom title provided."); }
 
-// --- 1. Parse Maxima Variables Safely ---
 function getStackData(id) {
     let el = document.getElementById(id);
     if (!el) return null;
@@ -66,7 +64,6 @@ function getStackData(id) {
 try {
     let customTitle = getStackData('data-title');
     if (customTitle) {
-        // Remove extra quotes if STACK added them
         customTitle = customTitle.replace(/^"|"$/g, ''); 
         document.getElementById('palette-title').innerText = customTitle;
     }
@@ -78,24 +75,20 @@ let titles = [];
 let texs = [];
 let partialCredit = 0.5;
 
-// Safely unpack data, handling STACK's extra quotes
 function parseStackJSON(id, fallback) {
     try {
         let rawData = getStackData(id);
         if (!rawData) return fallback;
         
         let parsed = JSON.parse(rawData);
-        // If STACK double-quoted it, it will parse as a string. Parse it again!
         if (typeof parsed === 'string') {
             parsed = JSON.parse(parsed);
         }
         
-        // Force it to be an array just to be perfectly safe
         if (!Array.isArray(parsed)) parsed = [parsed];
         return parsed;
         
     } catch (e) {
-        console.warn("Could not parse " + id, e);
         return fallback;
     }
 }
@@ -105,7 +98,6 @@ prefixes = parseStackJSON('data-prefixes', []);
 titles = parseStackJSON('data-titles', []);
 texs = parseStackJSON('data-tex', []);
 
-
 try {
     let parsedPartial = parseFloat(getStackData('data-partial'));
     if (!isNaN(parsedPartial)) partialCredit = parsedPartial;
@@ -113,13 +105,11 @@ try {
 
 let errorMessages = parseStackJSON('data-errors', []);
 
-// --- 2. Initialize Shared Tracking Variables ---
 const btnContainer = document.getElementById('preset-buttons-container');
 const container = document.getElementById('mathfields-container');
-let mfs = []; // Array to hold references to all generated mathfields
-let activeMathField = null; // The Tracker
+let mfs = []; 
+let activeMathField = null; 
 
-// --- 3. Process Teacher Answers ---
 function processChem(latex) {
     latex = latex.replace(/\\textcolor\{([^}]+)\}/g, 'COLOR$1');
     let arrowRegex = /((?:\\longrightarrow|\\xrightarrow|\\rightarrow|\\rightleftharpoons|\\Rightarrow)(?:_\{.*?\}|\^\{.*?\}|\{.*?\}|\[.*?\])*|=)/;
@@ -128,7 +118,7 @@ function processChem(latex) {
     if (parts.length !== 3) {
         let exact = latex.replace(/\s+/g, '');
         let sloppy = latex.replace(/\\[a-zA-Z]+/g, '').replace(/[_^{}\(\)\[\]]/g, '').replace(/\s+/g, '').toLowerCase();
-        return { exact, sloppy, species: sloppy }; // ONLY CHANGE: Added species
+        return { exact, sloppy, species: sloppy, superSloppy: sloppy }; 
     }
     
     let leftSide = parts[0];
@@ -185,12 +175,29 @@ function processChem(latex) {
         }).sort().join("+");
     }
 
+    // BRAND NEW: Strips BOTH coefficients and formatting to check if core atoms are right
+    function makeSuperSloppy(terms) {
+        return terms.map(t => {
+            let stripped = t.replace(/\s+/g, '').replace(/^[0-9]+/, ''); 
+            return stripped.replace(/[\{\}]/g, '')
+                    .replace(/\^\+(\d+)/g, '^$1+').replace(/\^1\+/g, '^+')
+                    .replace(/\^\-(\d+)/g, '^$1-').replace(/\^1\-/g, '^-')
+                    .replace(/\\[a-zA-Z]+/g, '')
+                    .replace(/[_^{}\(\)\[\]]/g, '').toLowerCase();
+        }).sort().join("+");
+    }
+
     let exactStr = makeExact(leftTerms) + theArrow + makeExact(rightTerms);
+    
     let sloppyArrow = makeSloppy([theArrow]); 
     let sloppyStr = makeSloppy(leftTerms) + "ARROW" + sloppyArrow + "ARROW" + makeSloppy(rightTerms);
+    
     let speciesStr = makeSpecies(leftTerms) + theArrow + makeSpecies(rightTerms);
 
-    return { exact: exactStr, sloppy: sloppyStr, species: speciesStr };
+    let superSloppyArrow = makeSuperSloppy([theArrow]); 
+    let superSloppyStr = makeSuperSloppy(leftTerms) + "ARROW" + superSloppyArrow + "ARROW" + makeSuperSloppy(rightTerms);
+
+    return { exact: exactStr, sloppy: sloppyStr, species: speciesStr, superSloppy: superSloppyStr };
 }
 
 let teacherDataArray = tas.map(ta => {
@@ -198,7 +205,6 @@ let teacherDataArray = tas.map(ta => {
     return processChem(cleanTa);
 });
 
-// --- 4. Build Dynamic Inputs ---
 tas.forEach((ta, index) => {
     const wrapper = document.createElement('div');
     wrapper.style.cssText = "border: 1px solid #ced4da; padding: 15px; border-radius: 4px; background: white; display: flex; flex-direction: column; position: relative;";
@@ -233,7 +239,6 @@ tas.forEach((ta, index) => {
 
 if (mfs.length > 0) { activeMathField = mfs[0].element; }
 
-// --- 5. Build Preset Buttons ---
 for (let i = 0; i < texs.length; i++) {
     let displayTex = Array.isArray(texs[i]) ? texs[i][0] : texs[i];
     let insertTex = Array.isArray(texs[i]) ? (texs[i][1] || texs[i][0]) : texs[i];
@@ -267,7 +272,6 @@ for (let i = 0; i < texs.length; i++) {
     btnContainer.appendChild(btn);
 }
 
-// --- 6. Connect to STACK ---
 stack_js.request_access_to_input("ans1", true).then((inputId1) => {
     const hiddenInput1 = document.getElementById(inputId1);
     
@@ -298,31 +302,43 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 let tData = teacherDataArray[index];
                 
                 let grade = 0;
-                let errorText = "";
+                let currentInputErrors = []; // Array to hold MULTIPLE errors for one box
                 
                 if (studentData.exact === tData.exact) {
                     grade = 1;
-                    errorText = ""; 
-                } else if (studentData.species === tData.species) {
-                    grade = partialCredit;
-                    errorText = errorMessages[0] || "התגובה לא מאוזנת נכון"; 
-                } else if (studentData.sloppy === tData.sloppy) {
-                    grade = partialCredit;
-                    errorText = errorMessages[1] || "בעיות במצבי צבירה או פורמט";
                 } else {
-                    grade = 0;
-                    errorText = errorMessages[2] || "הנוסחה לא נכונה";
+                    let isUnbalanced = false;
+                    let isBadFormat = false;
+
+                    // Figure out exactly what is wrong
+                    if (studentData.species === tData.species) {
+                        isUnbalanced = true;
+                        grade = partialCredit;
+                    } else if (studentData.sloppy === tData.sloppy) {
+                        isBadFormat = true;
+                        grade = partialCredit;
+                    } else if (studentData.superSloppy === tData.superSloppy) {
+                        // BOTH are wrong! Atoms match, but coeff/format are completely broken.
+                        isUnbalanced = true;
+                        isBadFormat = true;
+                        grade = 0; 
+                    } else {
+                        // Not even the atoms match
+                        currentInputErrors.push(errorMessages[2] || "הנוסחה לא נכונה");
+                    }
+
+                    // Add the errors to the stack
+                    if (isUnbalanced) currentInputErrors.push(errorMessages[0] || "התגובה לא מאוזנת נכון");
+                    if (isBadFormat) currentInputErrors.push(errorMessages[1] || "בעיות במצבי צבירה או פורמט");
                 }
                 
                 currentGrades.push(grade);
-                currentErrors.push(errorText);
+                // Join them with a line break so they display nicely
+                currentErrors.push(currentInputErrors.join("<br>"));
             });
             
             let newAnsStr = JSON.stringify(currentAnswers);
             let newGradeStr = JSON.stringify([currentGrades, currentErrors]);
-            
-            // LOUD CONSOLE LOG TO PROVE JS IS WORKING
-            console.log("🚀 PAYLOAD GOING TO STACK:", newGradeStr);
             
             if (hiddenInput1.value !== newAnsStr) {
                 hiddenInput1.value = newAnsStr;
@@ -365,7 +381,6 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             updateTeacherBox();
         }
 
-        // --- VISUAL MARKING (If Submitted) ---
         if (isLocked) {
             btnContainer.style.pointerEvents = "none"; 
             btnContainer.style.opacity = "0.6"; 
@@ -375,7 +390,6 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
             
             try { 
                 let parsedAns2 = JSON.parse(hiddenInput2.value);
-                console.log("👀 VISUAL MARKING READS THIS FROM MOODLE:", parsedAns2);
                 if (Array.isArray(parsedAns2) && Array.isArray(parsedAns2[0])) {
                     finalGrades = parsedAns2[0]; 
                     finalErrors = parsedAns2[1] || [];
@@ -390,7 +404,6 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                 let errorText = finalErrors[index];
                 
                 if (grade !== undefined && !isNaN(grade)) {
-                    // 1. Draw the Check/X Icon
                     const markIcon = document.createElement('div');
                     markIcon.style.cssText = "margin-left: 15px; display: flex; align-items: center;";
                     
@@ -404,18 +417,17 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                     
                     mfObj.row.appendChild(markIcon);
 
-                    // 2. Draw the Hebrew Text Box!
                     if (errorText && errorText !== "") {
                         const errorDiv = document.createElement('div');
                         errorDiv.style.cssText = "color: #d32f2f; font-weight: bold; margin-top: 10px; direction: rtl; text-align: right; background-color: #ffebee; padding: 6px 12px; border-radius: 6px; border: 1px solid #ffcdd2; font-size: 0.95em;";
-                        errorDiv.innerText = errorText;
+                        errorDiv.innerHTML = errorText; // Use innerHTML so the line breaks work!
                         mfObj.row.parentElement.appendChild(errorDiv);
                     }
                 }
             });
         }
-    }); // End of ans2 promise
-}); // End of ans1 promise
+    }); 
+}); 
 
 function updateTeacherBox() {
     const teacherBox = window.parent.document.getElementById('teacher-box');
