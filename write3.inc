@@ -1,5 +1,5 @@
-v=5
-[[iframe width="100%" height="450px"]]
+v=6
+[[iframe width="100%" height="550px"]]
 [[script src="https://unpkg.com/mathlive"]][[/script]]
 [[style]]
     math-field::part(virtual-keyboard-toggle),
@@ -47,7 +47,6 @@ v=5
 [[script type="module"]]
 import {stack_js} from '[[cors src="stackjsiframe.js"/]]';
 
-// --- Data Parsing Helpers ---
 function getStackData(id) {
     let el = document.getElementById(id);
     if (!el) return null;
@@ -62,57 +61,74 @@ function parseStackJSON(id, fallback) {
         if (!rawData) return fallback;
         let parsed = JSON.parse(rawData);
         if (typeof parsed === 'string') parsed = JSON.parse(parsed);
-        return Array.isArray(parsed) ? parsed : [parsed];
+        if (!Array.isArray(parsed)) parsed = [parsed];
+        return parsed;
     } catch (e) { return fallback; }
 }
 
-// --- Init Variables ---
-const tas = parseStackJSON('data-tas', []);
-const prefixes = parseStackJSON('data-prefixes', []);
-const titles = parseStackJSON('data-titles', []);
-const texs = parseStackJSON('data-tex', []);
-const errorMessages = parseStackJSON('data-errors', ["התגובה לא מאוזנת נכון", "בעיות בפורמט", "הנוסחה לא נכונה"]);
+let tas = parseStackJSON('data-tas', []);
+let prefixes = parseStackJSON('data-prefixes', []);
+let titles = parseStackJSON('data-titles', []);
+let texs = parseStackJSON('data-tex', []);
+let errorMessages = parseStackJSON('data-errors', ["התגובה לא מאוזנת נכון", "בעיות במצבי צבירה או פורמט", "הנוסחה לא נכונה"]);
 let partialCredit = parseFloat(getStackData('data-partial')) || 0.5;
 
-const btnContainer = document.getElementById('preset-buttons-container');
 const container = document.getElementById('mathfields-container');
+const btnContainer = document.getElementById('preset-buttons-container');
 let mfs = []; 
 let activeMathField = null; 
 
-// --- Core Chemistry Logic ---
+// --- RESTORED: Your Original Complex Chemistry Logic ---
 function processChem(latex) {
-    let arrowRegex = /((?:\\longrightarrow|\\xrightarrow|\\rightarrow|\\rightleftharpoons|\\Rightarrow)|=)/;
+    latex = latex.replace(/\\textcolor\{([^}]+)\}/g, 'COLOR$1');
+    let arrowRegex = /((?:\\longrightarrow|\\xrightarrow|\\rightarrow|\\rightleftharpoons|\\Rightarrow)(?:_\{.*?\}|\^\{.*?\}|\{.*?\}|\[.*?\])*|=)/;
     let parts = latex.split(arrowRegex);
+    
     if (parts.length !== 3) {
         let s = latex.replace(/\s+/g, '').toLowerCase();
-        return { exact: s, sloppy: s, species: s };
+        return { exact: s, sloppy: s, species: s, superSloppy: s }; 
     }
     
-    let leftSide = parts[0], rightSide = parts[2], theArrow = parts[1].replace(/\s+/g, '');
+    let leftSide = parts[0], rightSide = parts[2], theArrow = parts[1].replace(/\s+/g, '').replace(/\{\}/g, ''); 
     
-    function clean(side, mode) {
-        let terms = side.split('+').map(t => t.trim()).filter(t => t !== "");
-        return terms.map(t => {
-            let res = t.replace(/\s+/g, '').replace(/\\left|\\right|[\{\}]/g, '');
-            if (mode === 'species') res = res.replace(/^[0-9]+/, ''); // Remove coefficients
-            if (mode === 'sloppy') res = res.replace(/\\[a-zA-Z]+/g, '').replace(/[_^{}\(\)\[\]]/g, '').toLowerCase();
-            return res;
-        }).sort().join("+");
+    function splitTerms(sideStr) {
+        let terms = [], currentTerm = "", depth = 0;
+        for (let i = 0; i < sideStr.length; i++) {
+            let char = sideStr[i];
+            if (char === '{') depth++; 
+            else if (char === '}') depth = Math.max(0, depth - 1);
+            if (char === '+' && depth === 0) { terms.push(currentTerm.trim()); currentTerm = ""; } 
+            else { currentTerm += char; }
+        }
+        terms.push(currentTerm.trim());
+        return terms.filter(t => t !== "");
+    }
+
+    const leftTerms = splitTerms(leftSide), rightTerms = splitTerms(rightSide);
+
+    function makeExact(terms) {
+        return terms.map(t => t.replace(/\s+/g, '').replace(/\\left|\\right|[\{\}]/g, '').replace(/\^\+(\d+)/g, '^$1+').replace(/\^1\+/g, '^+').replace(/\^\-(\d+)/g, '^$1-').replace(/\^1\-/g, '^-').replace(/_\((s|l|g|aq)\)/gi, '($1)').replace(/_+/g, '_').replace(/^1(?=[a-zA-Z\\])/, '')).sort().join("+");
+    }
+    function makeSloppy(terms) {
+        return terms.map(t => t.replace(/[\{\}]/g, '').replace(/\^\+(\d+)/g, '^$1+').replace(/\^1\+/g, '^+').replace(/\^\-(\d+)/g, '^$1-').replace(/\^1\-/g, '^-').replace(/^1(?=[a-zA-Z\\])/, '').replace(/\\[a-zA-Z]+/g, '').replace(/[_^{}\(\)\[\]]/g, '').replace(/\s+/g, '').toLowerCase()).sort().join("+");
+    }
+    function makeSpecies(terms) {
+        return terms.map(t => t.replace(/\s+/g, '').replace(/^[0-9]+/, '').replace(/\\left|\\right|[\{\}]/g, '').replace(/\^\+(\d+)/g, '^$1+').replace(/\^1\+/g, '^+').replace(/\^\-(\d+)/g, '^$1-').replace(/\^1\-/g, '^-').replace(/_\((s|l|g|aq)\)/gi, '($1)').replace(/_+/g, '_')).sort().join("+");
     }
 
     return {
-        exact: clean(leftSide, 'exact') + theArrow + clean(rightSide, 'exact'),
-        species: clean(leftSide, 'species') + theArrow + clean(rightSide, 'species'),
-        sloppy: clean(leftSide, 'sloppy') + "ARR" + clean(rightSide, 'sloppy')
+        exact: makeExact(leftTerms) + theArrow + makeExact(rightTerms),
+        sloppy: makeSloppy(leftTerms) + "ARROW" + makeSloppy([theArrow]) + "ARROW" + makeSloppy(rightTerms),
+        species: makeSpecies(leftTerms) + theArrow + makeSpecies(rightTerms)
     };
 }
 
-const teacherDataArray = tas.map(ta => processChem(ta.replace(/\\\\/g, '\\')));
+let teacherDataArray = tas.map(ta => processChem(ta.replace(/^["']|["']$/g, '').replace(/\\\\/g, '\\')));
 
-// --- UI Construction ---
+// --- RESTORED: UI Generation ---
 tas.forEach((ta, index) => {
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = "border: 1px solid #ced4da; padding: 15px; border-radius: 4px; background: white; display: flex; flex-direction: column;";
+    wrapper.style.cssText = "border: 1px solid #ced4da; padding: 15px; border-radius: 4px; background: white; display: flex; flex-direction: column; position: relative;";
     
     if (titles[index]) {
         const label = document.createElement('label');
@@ -120,105 +136,102 @@ tas.forEach((ta, index) => {
         wrapper.appendChild(label);
         if (window.MathLive) MathLive.renderMathInElement(label);
     }
-
+    const mfRow = document.createElement('div');
+    mfRow.style.cssText = "display: flex; align-items: center; width: 100%;";
     const mf = document.createElement('math-field');
-    mf.style.cssText = "width: 100%; font-size: 1.4em; border: 2px solid #93c5fd; border-radius: 8px; padding: 10px;";
+    mf.style.cssText = "width: 100%; font-size: 1.4em; background-color: #ffffff; border: 2px solid #93c5fd; border-radius: 8px; padding: 12px;";
+    
     mf.addEventListener('focusin', () => {
         activeMathField = mf;
         const palette = document.getElementById('button-palette');
-        wrapper.parentNode.insertBefore(palette, wrapper);
+        if (palette && wrapper.parentNode) wrapper.parentNode.insertBefore(palette, wrapper);
     });
 
-    const mfRow = document.createElement('div');
-    mfRow.style.display = "flex";
-    mfRow.style.alignItems = "center";
     mfRow.appendChild(mf);
     wrapper.appendChild(mfRow);
     container.appendChild(wrapper);
     mfs.push({ element: mf, row: mfRow, wrapper: wrapper });
 });
 
-// --- Button Palette Setup ---
-texs.forEach(tex => {
+// --- RESTORED: Preset Buttons (No Commas) ---
+texs.forEach((t) => {
+    let display = Array.isArray(t) ? t[0] : t;
+    let insert = Array.isArray(t) ? (t[1] || t[0]) : t;
     const btn = document.createElement('div');
-    btn.style.cssText = "cursor: pointer; padding: 8px; border: 1px solid #ccc; background: #eee; min-width: 40px; text-align: center;";
-    btn.innerHTML = `\\(${tex}\\)`;
+    btn.style.cssText = "cursor: pointer; width: 85px; height: 45px; border: 1px solid #ced4da; background: #f8f9fa; display: flex; align-items: center; justify-content: center; border-radius: 4px;";
+    btn.innerHTML = `\\( ${display} \\)`;
     if (window.MathLive) MathLive.renderMathInElement(btn);
-    btn.addEventListener('click', () => {
-        if (activeMathField) { activeMathField.insert(tex); activeMathField.focus(); }
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!activeMathField) return;
+        if (insert === "^") activeMathField.executeCommand("moveToSuperscript");
+        else if (insert === "_") activeMathField.executeCommand("moveToSubscript");
+        else activeMathField.insert(insert);
+        activeMathField.focus();
     });
     btnContainer.appendChild(btn);
 });
 
-// --- STACK Integration ---
-stack_js.request_access_to_input("ans1", true).then((id1) => {
-    const hidden1 = document.getElementById(id1);
-    stack_js.request_access_to_input("ans2", true).then((id2) => {
-        const hidden2 = document.getElementById(id2);
-        const isLocked = hidden1.disabled || hidden1.readOnly;
+// --- RESTORED: STACK Logic (With ans2 Number Fix) ---
+stack_js.request_access_to_input("ans1", true).then((inputId1) => {
+    const hiddenInput1 = document.getElementById(inputId1);
+    stack_js.request_access_to_input("ans2", true).then((inputId2) => {
+        const hiddenInput2 = document.getElementById(inputId2);
+        const isLocked = hiddenInput1.readOnly || hiddenInput1.disabled;
 
-        function evaluate() {
+        function evaluateStudent() {
             if (isLocked) return;
-            let answers = mfs.map(m => m.element.getValue("latex").replace(/\\/g, '\\\\'));
-            let grades = mfs.map((m, i) => {
-                let sData = processChem(m.element.getValue("latex"));
-                let tData = teacherDataArray[i];
-                if (sData.exact === tData.exact) return 1;
-                if (sData.species === tData.species || sData.sloppy === tData.sloppy) return partialCredit;
-                return 0;
+            let currentAnswers = [], currentGrades = [];
+            
+            mfs.forEach((mfObj, index) => {
+                let rawLatex = mfObj.element.getValue("latex") || "";
+                currentAnswers.push(rawLatex.replace(/\\/g, '\\\\'));
+                
+                let sData = processChem(rawLatex), tData = teacherDataArray[index];
+                let grade = (rawLatex.trim() === '') ? 0 : (sData.exact === tData.exact ? 1 : (sData.species === tData.species || sData.sloppy === tData.sloppy ? partialCredit : 0));
+                currentGrades.push(grade);
             });
-            hidden1.value = JSON.stringify(answers);
-            hidden2.value = JSON.stringify(grades);
-            hidden1.dispatchEvent(new Event('change'));
-            hidden2.dispatchEvent(new Event('change'));
+            hiddenInput1.value = JSON.stringify(currentAnswers);
+            hiddenInput2.value = JSON.stringify(currentGrades); // CLEAN: Numbers only
+            hiddenInput1.dispatchEvent(new Event('change'));
+            hiddenInput2.dispatchEvent(new Event('change'));
         }
 
-        // Initialize values
-        let saved = parseStackJSON(id1, []);
+        let saved = parseStackJSON(inputId1, []);
         mfs.forEach((m, i) => {
             if (saved[i]) m.element.setValue(saved[i].replace(/\\\\/g, '\\'), {suppressChangeNotifications: true});
-            m.element.addEventListener('input', evaluate);
+            m.element.addEventListener('input', evaluateStudent);
         });
 
-        // Review Mode Logic
         if (isLocked) {
-            let finalGrades = parseStackJSON(id2, []);
-            mfs.forEach((m, i) => {
-                m.element.readOnly = true;
-                let grade = finalGrades[i];
-                let sData = processChem(m.element.getValue("latex"));
-                let tData = teacherDataArray[i];
-        
-               // --- Premium SVG Icons ---
-               const svgCheck = `<svg viewBox="0 0 512 512" width="24" height="24" fill="#4caf50"><path d="M470.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L192 338.7 425.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>`;
-               const svgAdjust = `<svg viewBox="0 0 512 512" width="24" height="24" fill="#ff9800"><path d="M256 0C114.6 0 0 114.6 0 256s114.6 256 256 256 256-114.6 256-256S397.4 0 256 0zM256 464c-114.7 0-208-93.3-208-208S141.3 48 256 48v416z"/></svg>`;
-               const svgTimes = `<svg viewBox="0 0 320 512" width="24" height="24" fill="#f44336"><path d="M310.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L160 210.7 54.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L114.7 256 9.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 301.3 265.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L205.3 256 310.6 150.6z"/></svg>`;
+            let finalGrades = parseStackJSON(inputId2, []);
+            mfs.forEach((mfObj, index) => {
+                mfObj.element.readOnly = true;
+                let grade = finalGrades[index];
+                let sData = processChem(mfObj.element.getValue("latex")), tData = teacherDataArray[index];
 
-                let mark = document.createElement('div');
-                mark.style.marginLeft = "15px";
-                mark.style.display = "flex";
-                mark.style.alignItems = "center";
-    
-                if (grade === 1) mark.innerHTML = svgCheck; 
-                else if (grade > 0) mark.innerHTML = svgAdjust; 
-                else mark.innerHTML = svgTimes; 
+                // --- RESTORED: Premium SVGs ---
+                const svgCheck = `<svg viewBox="0 0 512 512" width="24" height="24" fill="#4caf50"><path d="M470.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L192 338.7 425.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>`;
+                const svgAdjust = `<svg viewBox="0 0 512 512" width="24" height="24" fill="#ff9800"><path d="M256 0C114.6 0 0 114.6 0 256s114.6 256 256 256 256-114.6 256-256S397.4 0 256 0zM256 464c-114.7 0-208-93.3-208-208S141.3 48 256 48v416z"/></svg>`;
+                const svgTimes = `<svg viewBox="0 0 320 512" width="24" height="24" fill="#f44336"><path d="M310.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L160 210.7 54.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L114.7 256 9.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 301.3 265.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L205.3 256 310.6 150.6z"/></svg>`;
+                
+                let markIcon = document.createElement('div');
+                markIcon.style.marginLeft = "15px";
+                if (grade === 1) markIcon.innerHTML = svgCheck; 
+                else if (grade > 0) markIcon.innerHTML = svgAdjust; 
+                else markIcon.innerHTML = svgTimes; 
+                mfObj.row.appendChild(markIcon);
 
-                m.row.appendChild(mark);
-               
-
-                // Feedback Boxes
-                if (grade < 1 && m.element.getValue().trim() !== "") {
-                    let errBox = document.createElement('div');
-                    errBox.style.cssText = "color: red; background: #fff0f0; padding: 5px; margin-top: 5px; direction: rtl;";
-                    if (sData.species === tData.species) errBox.innerText = errorMessages[0];
-                    else if (sData.sloppy === tData.sloppy) errBox.innerText = errorMessages[1];
-                    else errBox.innerText = errorMessages[2];
-                    m.wrapper.appendChild(errBox);
+                if (grade < 1 && mfObj.element.getValue().trim() !== "") {
+                    let errDiv = document.createElement('div');
+                    errDiv.style.cssText = "color: #d32f2f; font-weight: bold; margin-top: 10px; direction: rtl; text-align: right; background-color: #ffebee; padding: 6px 12px; border-radius: 6px; border: 1px solid #ffcdd2;";
+                    if (sData.species === tData.species) errDiv.innerText = errorMessages[0];
+                    else if (sData.sloppy === tData.sloppy) errDiv.innerText = errorMessages[1];
+                    else errDiv.innerText = errorMessages[2];
+                    mfObj.wrapper.appendChild(errDiv);
                 }
             });
-        } else {
-            evaluate();
-        }
+        } else { evaluateStudent(); }
     });
 });
 [[/script]]
