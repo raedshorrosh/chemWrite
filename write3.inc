@@ -128,32 +128,32 @@ function processChem(latex) {
     if (parts.length !== 3) {
         let exact = latex.replace(/\s+/g, '');
         let sloppy = latex.replace(/\\[a-zA-Z]+/g, '').replace(/[_^{}\(\)\[\]]/g, '').replace(/\s+/g, '').toLowerCase();
-        return { exact, sloppy };
+        return { exact, sloppy, species: sloppy }; // ONLY CHANGE: Added species
     }
     
     let leftSide = parts[0];
     let rightSide = parts[2];
     let theArrow = parts[1].replace(/\s+/g, '').replace(/\{\}/g, ''); 
     
-function splitTerms(sideStr) {
+    function splitTerms(sideStr) {
         let terms = [], currentTerm = "", depth = 0;
-      // --- THE FIXED VERSION ---
-for (let i = 0; i < sideStr.length; i++) {
-    let char = sideStr[i];
+        // --- THE FIXED VERSION ---
+        for (let i = 0; i < sideStr.length; i++) {
+            let char = sideStr[i];
 
-    // We only track curly braces {} because they are the only 
-    // characters LaTeX uses to "hide" math like charges.
-    if (char === '{') {
-        depth++;
-    } else if (char === '}') {
-        // The Medicine: prevents negative depth from rogue arrow brackets
-        depth = Math.max(0, depth - 1);
-    }
-    
-    // Parentheses () and Brackets [] are now IGNORED. 
-    // This prevents (aq) from dropping the depth back to 0 too early.
+            // We only track curly braces {} because they are the only 
+            // characters LaTeX uses to "hide" math like charges.
+            if (char === '{') {
+                depth++;
+            } else if (char === '}') {
+                // The Medicine: prevents negative depth from rogue arrow brackets
+                depth = Math.max(0, depth - 1);
+            }
+            
+            // Parentheses () and Brackets [] are now IGNORED. 
+            // This prevents (aq) from dropping the depth back to 0 too early.
 
-    if (char === '+' && depth === 0) {
+            if (char === '+' && depth === 0) {
                 terms.push(currentTerm.trim());
                 currentTerm = "";
             } else {
@@ -166,7 +166,7 @@ for (let i = 0; i < sideStr.length; i++) {
     let leftTerms = splitTerms(leftSide);
     let rightTerms = splitTerms(rightSide);
 
-function makeExact(terms) {
+    function makeExact(terms) {
         return terms.map(t => {
             return t.replace(/\s+/g, '')
                     .replace(/\\left/g, '')
@@ -182,7 +182,9 @@ function makeExact(terms) {
                     .replace(/\^1\-/g, '^-')       
                     
                     .replace(/_\((s|l|g|aq)\)/gi, '($1)')
-                    .replace(/_+/g, '_');
+                    .replace(/_+/g, '_')
+                    // ONLY CHANGE: Added this line to strip leading 1
+                    .replace(/^1(?=[a-zA-Z\\])/, ''); 
         }).sort().join("+");
     }
 
@@ -196,17 +198,39 @@ function makeExact(terms) {
                     .replace(/\^\-(\d+)/g, '^$1-')
                     .replace(/\^1\-/g, '^-')
                     
+                    // ONLY CHANGE: Added this line to strip leading 1 before letters vanish
+                    .replace(/^1(?=[a-zA-Z\\])/, '')
                     .replace(/\\[a-zA-Z]+/g, '')
                     .replace(/[_^{}\(\)\[\]]/g, '')
                     .replace(/\s+/g, '')
                     .toLowerCase();
         }).sort().join("+");
     }
+
+    // ONLY CHANGE: Added the makeSpecies function and updated the variables below it
+    function makeSpecies(terms) {
+        return terms.map(t => {
+            let stripped = t.replace(/\s+/g, '').replace(/^[0-9]+/, ''); 
+            return stripped.replace(/\\left/g, '')
+                    .replace(/\\right/g, '')
+                    .replace(/[\{\}]/g, '')
+                    .replace(/\^\+(\d+)/g, '^$1+') 
+                    .replace(/\^1\+/g, '^+')       
+                    .replace(/\^\-(\d+)/g, '^$1-') 
+                    .replace(/\^1\-/g, '^-')       
+                    .replace(/_\((s|l|g|aq)\)/gi, '($1)')
+                    .replace(/_+/g, '_');
+        }).sort().join("+");
+    }
+
     let exactStr = makeExact(leftTerms) + theArrow + makeExact(rightTerms);
     let sloppyArrow = makeSloppy([theArrow]); 
     let sloppyStr = makeSloppy(leftTerms) + "ARROW" + sloppyArrow + "ARROW" + makeSloppy(rightTerms);
+    let speciesStr = makeSpecies(leftTerms) + theArrow + makeSpecies(rightTerms);
 
-    return { exact: exactStr, sloppy: sloppyStr };
+    let result = { exact: exactStr, sloppy: sloppyStr, species: speciesStr };
+    console.log("processChem output:", result);
+    return result;
 }
 
 // Pre-calculate teacher data for all inputs
@@ -214,7 +238,6 @@ let teacherDataArray = tas.map(ta => {
     let cleanTa = ta.replace(/^["']|["']$/g, '').replace(/\\\\/g, '\\');
     return processChem(cleanTa);
 });
-
 // --- 4. Build Dynamic Inputs ---
 tas.forEach((ta, index) => {
     const wrapper = document.createElement('div');
