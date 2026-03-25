@@ -6,12 +6,22 @@
     math-field::part(menu-toggle) {
         display: none !important;
     }
-     /* --- COLOR BUTTON CSS ADDED HERE --- */
-    .palette-divider { width: 2px; background: #dee2e6; margin: 0 8px; height: 28px; border-radius: 1px; display: inline-block; vertical-align: middle; }
-    .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s; padding: 0; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; margin: 0 4px; }
-    .color-btn:hover { transform: scale(1.15); }
-    .color-btn .check-icon { width: 14px; height: 14px; display: none; }
-    .color-btn.active .check-icon { display: block; }
+#mathfields-container label {
+        background-color: #f4f8fa !important;
+        color: #0073a5 !important;
+        padding: 6px 16px !important;
+        border-radius: 20px !important;
+        border: 1px solid #b8daff !important;
+        display: inline-block !important;
+        width: fit-content !important;
+        margin-bottom: 12px !important;
+        margin-left: auto !important; 
+        margin-right: 0 !important; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+        font-size: 1.1em !important;
+        text-align: right !important;
+        direction: rtl !important; /* <-- Adds absolute RTL enforcement */
+    }
 [[/style]]
 
 <div style="display: none;">
@@ -21,30 +31,13 @@
     <div id="data-tex">{#js_tex#}</div>
     <div id="data-partial">{#js_partial_credit#}</div>
     <div id="data-debug">{#debug_display#}</div> 
+    <div id="data-errors" style="display: none;">{#js_error_dict#}</div>
 </div>
 
 <div style="font-family: sans-serif; padding: 10px; box-sizing: border-box;">
     <div id="button-palette" style="background: white; border: 1px solid #ced4da; border-radius: 6px; margin-bottom: 5px; overflow: hidden; width: fit-content; max-width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
         <div id="palette-title" dir="rtl" style="padding: 8px 12px; background: #e9ecef; border-bottom: 1px solid #ced4da; font-weight: bold; font-size: 0.85em; color: #495057;">
           Symbols & Templates
-        </div>
-        <!-- --- COLOR BUTTON HTML ADDED HERE NEXT TO PRESETS --- -->
-        <div style="display: flex; flex-wrap: wrap; align-items: center; padding: 10px; gap: 8px;">
-            <div id="preset-buttons-container" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
-            
-            <div class="palette-divider"></div>
-            <button class="color-btn" style="background-color: #D55E00;" data-color="#D55E00" title="Vermillion">
-                <svg viewBox="0 0 24 24" class="check-icon"><path fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-            </button>
-            <button class="color-btn" style="background-color: #0072B2;" data-color="#0072B2" title="Blue">
-                <svg viewBox="0 0 24 24" class="check-icon"><path fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-            </button>
-            <button class="color-btn" style="background-color: #009E73;" data-color="#009E73" title="Bluish Green">
-                <svg viewBox="0 0 24 24" class="check-icon"><path fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-            </button>
-            <button class="color-btn" style="background-color: #CC79A7;" data-color="#CC79A7" title="Purple">
-                <svg viewBox="0 0 24 24" class="check-icon"><path fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-            </button>
         </div>
         <div id="preset-buttons-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px;"></div>
     </div>
@@ -111,10 +104,14 @@ prefixes = parseStackJSON('data-prefixes', []);
 titles = parseStackJSON('data-titles', []);
 texs = parseStackJSON('data-tex', []);
 
+
 try {
     let parsedPartial = parseFloat(getStackData('data-partial'));
     if (!isNaN(parsedPartial)) partialCredit = parsedPartial;
 } catch (e) {}
+
+let errorMessages = parseStackJSON('data-errors', []);
+console.log("Error Dictionary Loaded Successfully:", errorMessages);
 
 // --- 2. Initialize Shared Tracking Variables ---
 const btnContainer = document.getElementById('preset-buttons-container');
@@ -138,14 +135,25 @@ function processChem(latex) {
     let rightSide = parts[2];
     let theArrow = parts[1].replace(/\s+/g, '').replace(/\{\}/g, ''); 
     
-    function splitTerms(sideStr) {
+function splitTerms(sideStr) {
         let terms = [], currentTerm = "", depth = 0;
-        for (let i = 0; i < sideStr.length; i++) {
-            let char = sideStr[i];
-            if (char === '{' || char === '(' || char === '[') depth++;
-            else if (char === '}' || char === ')' || char === ']') depth--;
-            
-            if (char === '+' && depth === 0) {
+      // --- THE FIXED VERSION ---
+for (let i = 0; i < sideStr.length; i++) {
+    let char = sideStr[i];
+
+    // We only track curly braces {} because they are the only 
+    // characters LaTeX uses to "hide" math like charges.
+    if (char === '{') {
+        depth++;
+    } else if (char === '}') {
+        // The Medicine: prevents negative depth from rogue arrow brackets
+        depth = Math.max(0, depth - 1);
+    }
+    
+    // Parentheses () and Brackets [] are now IGNORED. 
+    // This prevents (aq) from dropping the depth back to 0 too early.
+
+    if (char === '+' && depth === 0) {
                 terms.push(currentTerm.trim());
                 currentTerm = "";
             } else {
@@ -155,18 +163,24 @@ function processChem(latex) {
         terms.push(currentTerm.trim());
         return terms.filter(t => t !== "");
     }
-
     let leftTerms = splitTerms(leftSide);
     let rightTerms = splitTerms(rightSide);
 
-    function makeExact(terms) {
+function makeExact(terms) {
         return terms.map(t => {
             return t.replace(/\s+/g, '')
                     .replace(/\\left/g, '')
                     .replace(/\\right/g, '')
                     .replace(/[\{\}]/g, '')
-                    .replace(/\^([+-])(\d+)/g, '^$2$1')
-                    .replace(/\^1([+-])/g, '^$1')
+                    
+                    // EXPLICIT POSITIVE LOGIC
+                    .replace(/\^\+(\d+)/g, '^$1+') 
+                    .replace(/\^1\+/g, '^+')       
+                    
+                    // EXPLICIT NEGATIVE LOGIC
+                    .replace(/\^\-(\d+)/g, '^$1-') 
+                    .replace(/\^1\-/g, '^-')       
+                    
                     .replace(/_\((s|l|g|aq)\)/gi, '($1)')
                     .replace(/_+/g, '_');
         }).sort().join("+");
@@ -175,15 +189,19 @@ function processChem(latex) {
     function makeSloppy(terms) {
         return terms.map(t => {
             return t.replace(/[\{\}]/g, '')
-                    .replace(/\^([+-])(\d+)/g, '^$2$1')
-                    .replace(/\^1([+-])/g, '^$1')
+            
+                    // EXPLICIT POSITIVE & NEGATIVE LOGIC
+                    .replace(/\^\+(\d+)/g, '^$1+')
+                    .replace(/\^1\+/g, '^+')
+                    .replace(/\^\-(\d+)/g, '^$1-')
+                    .replace(/\^1\-/g, '^-')
+                    
                     .replace(/\\[a-zA-Z]+/g, '')
                     .replace(/[_^{}\(\)\[\]]/g, '')
                     .replace(/\s+/g, '')
                     .toLowerCase();
         }).sort().join("+");
     }
-
     let exactStr = makeExact(leftTerms) + theArrow + makeExact(rightTerms);
     let sloppyArrow = makeSloppy([theArrow]); 
     let sloppyStr = makeSloppy(leftTerms) + "ARROW" + sloppyArrow + "ARROW" + makeSloppy(rightTerms);
@@ -307,33 +325,6 @@ for (let i = 0; i < texs.length; i++) {
     });
     btnContainer.appendChild(btn);
 }
-// --- COLOR BUTTON JAVASCRIPT LOGIC ADDED HERE ---
-let activeColorBtn = null;
-const colorBtns = document.querySelectorAll('.color-btn');
-
-colorBtns.forEach(btn => {
-    btn.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // Prevents mathfield from losing highlight
-        
-        if (!activeMathField) return;
-
-        if (activeColorBtn === btn) {
-            // Turn OFF color
-            btn.classList.remove('active');
-            activeColorBtn = null;
-            activeMathField.applyStyle({color: 'none'});
-        } else {
-            // Turn ON color
-            if (activeColorBtn) activeColorBtn.classList.remove('active');
-            btn.classList.add('active');
-            activeColorBtn = btn;
-            activeMathField.applyStyle({color: btn.getAttribute('data-color')});
-        }
-        
-        // Force an input event so STACK updates and evaluates immediately
-        activeMathField.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-});
 
 // --- 6. Connect to STACK ---
 stack_js.request_access_to_input("ans1", true).then((inputId1) => {
