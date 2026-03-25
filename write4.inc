@@ -43,6 +43,16 @@ fixing the mathfield style
     </div></div>
 
 [[script type="module"]]
+// Forcefully inject CSS to hide MathLive icons
+const hideIconsStyle = document.createElement('style');
+hideIconsStyle.innerHTML = `
+    math-field::part(virtual-keyboard-toggle),
+    math-field::part(menu-toggle) {
+        display: none !important;
+    }
+`;
+// Attach it to the head of the document where it applies universally
+document.head.appendChild(hideIconsStyle);
 // Import STACK's Javascript API for communication
 import {stack_js} from '[[cors src="stackjsiframe.js"/]]';
 // Attempt 1: Set a custom title from the direct STACK tag
