@@ -1,27 +1,27 @@
 [[iframe width="100%" height="450px"]]
 [[script src="https://unpkg.com/mathlive"]][[/script]]
 [[style]]
-    /* This targets BOTH the keyboard icon and the menu icon */
-    math-field::part(virtual-keyboard-toggle),
-    math-field::part(menu-toggle) {
-        display: none !important;
-    }
+    /* This targets BOTH the keyboard icon and the menu icon */
+    math-field::part(virtual-keyboard-toggle),
+    math-field::part(menu-toggle) {
+        display: none !important;
+    }
 #mathfields-container label {
-        background-color: #f4f8fa !important;
-        color: #0073a5 !important;
-        padding: 6px 16px !important;
-        border-radius: 20px !important;
-        border: 1px solid #b8daff !important;
-        display: inline-block !important;
-        width: fit-content !important;
-        margin-bottom: 12px !important;
-        margin-left: auto !important; 
-        margin-right: 0 !important; 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
-        font-size: 1.1em !important;
-        text-align: right !important;
-        direction: rtl !important; /* <-- Adds absolute RTL enforcement */
-    }
+        background-color: #f4f8fa !important;
+        color: #0073a5 !important;
+        padding: 6px 16px !important;
+        border-radius: 20px !important;
+        border: 1px solid #b8daff !important;
+        display: inline-block !important;
+        width: fit-content !important;
+        margin-bottom: 12px !important;
+        margin-left: auto !important; 
+        margin-right: 0 !important; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+        font-size: 1.1em !important;
+        text-align: right !important;
+        direction: rtl !important; /* <-- Adds absolute RTL enforcement */
+    }
 [[/style]]
 
 <div style="display: none;">
