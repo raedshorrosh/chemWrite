@@ -1,5 +1,5 @@
 [[iframe width="100%" height="450px"]]
-[[script src="https://unpkg.com/mathlive"]][[/script]]
+[[script src="https://unpkg.com/mathlive@0.108.1"]][[/script]]
 [[style]]
     /* This targets BOTH the keyboard icon and the menu icon */
     math-field::part(virtual-keyboard-toggle),
@@ -276,6 +276,10 @@ tas.forEach((ta, index) => {
     
     // Create Mathfield
     const mf = document.createElement('math-field');
+    // --- ADD THESE TWO LINES TO KILL THE ICONS FOR GOOD ---
+    mf.menuToggleVisibility = "hidden";
+    mf.virtualKeyboardToggleVisibility = "hidden";
+    // ------------------------------------------------------
     mf.style.cssText = "width: 100%; font-size: 1.4em; background-color: #ffffff; border: 2px solid #93c5fd; border-radius: 8px; padding: 12px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
     
     // Update tracker on focus and move the toolbar ABOVE the entire question box
