@@ -1,4 +1,4 @@
-fixing the mathfield
+fixing the mathfield style
 [[iframe width="100%" height="450px"]]
 [[script src="https://unpkg.com/mathlive"]][[/script]]
 [[style]]
@@ -236,10 +236,7 @@ tas.forEach((ta, index) => {
     mfRow.style.cssText = "display: flex; align-items: center; width: 100%;";
     
     const mf = document.createElement('math-field');
-        mf.menuItems = []; 
-        mf.mathVirtualKeyboardPolicy = "manual"; 
-        mf.addEventListener('focus', () => window.mathVirtualKeyboard.hide());
-        mf.style.cssText = "width: 100%; font-size: 1.4em; background-color: #ffffff; border: 2px solid #93c5fd; border-radius: 8px; padding: 12px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
+        mf.style.cssText = "width: 100%; font-size: 1.4em; background-color: #ffffff; border: 2px solid #93c5fd; border-radius: 8px; padding: 12px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
     
     // Move the symbol palette to float above the currently focused field
     mf.addEventListener('focusin', () => {
@@ -255,6 +252,9 @@ tas.forEach((ta, index) => {
     wrapper.appendChild(mfRow);
     container.appendChild(wrapper);
     mfs.push({ element: mf, row: mfRow });
+    mf.menuItems = []; 
+    mf.mathVirtualKeyboardPolicy = "manual"; 
+       
 });
 
 if (mfs.length > 0) { activeMathField = mfs[0].element; }
