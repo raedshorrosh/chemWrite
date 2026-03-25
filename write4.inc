@@ -1,3 +1,4 @@
+corrected
 [[iframe width="100%" height="450px"]]
 [[script src="https://unpkg.com/mathlive"]][[/script]]
 [[style]]
@@ -345,21 +346,29 @@ stack_js.request_access_to_input("ans1", true).then((inputId1) => {
                     let isBadFormat = false;
 
                     // Figure out exactly what is wrong
-                    if (studentData.species === tData.species) {
-                        isUnbalanced = true;
-                        grade = partialCredit;
-                    } else if (studentData.sloppy === tData.sloppy) {
-                        isBadFormat = true;
-                        grade = partialCredit;
-                    } else if (studentData.superSloppy === tData.superSloppy) {
-                        // BOTH are wrong! Atoms match, but coeff/format are completely broken.
-                        isUnbalanced = true;
-                        isBadFormat = true;
-                        grade = 0; 
-                    } else {
-                        // Not even the atoms match
-                        currentInputErrors.push(errorMessages[2] || "הנוסחה לא נכונה");
-                    }
+                  
+
+// Figure out exactly what is wrong
+let teacherHasArrow = tData.exact.match(/\\longrightarrow|\\xrightarrow|\\rightarrow|\\rightleftharpoons|\\Rightarrow|=/);
+
+if (studentData.species === tData.species && teacherHasArrow) {
+    // It's a full reaction, but the coefficients are wrong
+    isUnbalanced = true;
+    grade = partialCredit;
+} else if (studentData.sloppy === tData.sloppy) {
+    // It's just a single compound (or reaction) with missing subscripts/formatting
+    isBadFormat = true;
+    grade = partialCredit;
+} else if (studentData.superSloppy === tData.superSloppy) {
+    // BOTH are wrong! Atoms match, but coeff/format are completely broken.
+    if (teacherHasArrow) isUnbalanced = true;
+    isBadFormat = true;
+    grade = 0; 
+} else {
+    // Not even the atoms match
+    currentInputErrors.push(errorMessages[2] || "הנוסחה לא נכונה");
+}
+                
 
                     // Add the errors to the stack
                     if (isUnbalanced) currentInputErrors.push(errorMessages[0] || "התגובה לא מאוזנת נכון");
