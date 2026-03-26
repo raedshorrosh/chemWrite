@@ -247,6 +247,7 @@ tas.forEach((ta, index) => {
     mfRow.style.cssText = "display: flex; align-items: center; width: 100%;";
     
     const mf = document.createElement('math-field');
+        mf.setAttribute('dir', 'ltr');
         mf.style.cssText = "width: 100%; font-size: 1.4em; background-color: #ffffff; border: 2px solid #93c5fd; border-radius: 8px; padding: 12px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;";    
     
     // Move the symbol palette to float above the currently focused field
