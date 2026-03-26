@@ -231,6 +231,7 @@ let teacherDataArray = tas.map(ta => {
 // Builds the math-fields based on the number of Teacher Answers
 tas.forEach((ta, index) => {
     const wrapper = document.createElement('div');
+    wrapper.setAttribute('dir', 'rtl');
     wrapper.style.cssText = "border: 1px solid #ced4da; padding: 15px; border-radius: 4px; background: white; display: flex; flex-direction: column; position: relative;";
     
     // Add corresponding title above the math-field
