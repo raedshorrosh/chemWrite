@@ -1,5 +1,5 @@
 [[iframe width="100%" height="450px"]]
-r100
+r200
 [[script src="https://unpkg.com/mathlive@0.110.0"]][[/script]]
 
 [[style]]
@@ -291,8 +291,194 @@ if (paletteTitle) {
    CHEMISTRY ENGINE
    ========================================================= */
 
-const REACTION_ARROW_RE =
-    /\\xrightarrow(?:\[[^\]]*\])?\{[^{}]*\}|\\rightleftharpoons|\\longrightarrow(?:\{\})?|\\rightarrow(?:\{\})?|\\Rightarrow(?:\{\})?|=/;
+const REACTION_ARROW_COMMANDS = [
+    "\\rightleftharpoons",
+    "\\longrightarrow",
+    "\\rightarrow",
+    "\\Rightarrow",
+    "\\xrightarrow"
+];
+
+
+/*
+ Read one balanced {...} or [...] group, including nested
+ groups of the same type.  This is needed for arrows such as:
+
+   \\longrightarrow{H_2O_{\\left(l\\right)}}
+
+ A regex such as {[^{}]*} cannot handle the nested braces.
+*/
+function consumeBalancedGroup(
+    s,
+    start,
+    openChar,
+    closeChar
+) {
+
+    if (
+        start >= s.length ||
+        s[start] !== openChar
+    ) {
+        return start;
+    }
+
+    let depth = 0;
+
+    for (
+        let i = start;
+        i < s.length;
+        i++
+    ) {
+
+        if (s[i] === openChar) {
+            depth++;
+        }
+        else if (s[i] === closeChar) {
+            depth--;
+
+            if (depth === 0) {
+                return i + 1;
+            }
+        }
+    }
+
+    /* Malformed/unclosed group: leave it unconsumed. */
+    return start;
+}
+
+
+/*
+ Find the reaction arrow and consume any arrow annotation.
+
+ Examples which are all parsed as ONE arrow token:
+
+   \\longrightarrow{}
+   \\longrightarrow{\\Delta}
+   \\longrightarrow{H_2O_{\\left(l\\right)}}
+   \\xrightarrow{heat}
+   \\xrightarrow[below]{above}
+
+ The annotation belongs to the arrow and must never become
+ part of the first product.  This was the source of the bugs
+ with explicit coefficient 1, product order, and balance.
+*/
+function findReactionArrow(latex) {
+
+    let best = null;
+
+    for (
+        const command of REACTION_ARROW_COMMANDS
+    ) {
+
+        const index = latex.indexOf(command);
+
+        if (
+            index !== -1 &&
+            (
+                best === null ||
+                index < best.index
+            )
+        ) {
+            best = {
+                index: index,
+                command: command
+            };
+        }
+    }
+
+    const equalsIndex = latex.indexOf("=");
+
+    if (
+        equalsIndex !== -1 &&
+        (
+            best === null ||
+            equalsIndex < best.index
+        )
+    ) {
+        best = {
+            index: equalsIndex,
+            command: "="
+        };
+    }
+
+    if (best === null) {
+        return null;
+    }
+
+    let end =
+        best.index +
+        best.command.length;
+
+
+    if (best.command !== "=") {
+
+        /* Ignore whitespace between arrow command and annotation. */
+        while (
+            end < latex.length &&
+            /\s/.test(latex[end])
+        ) {
+            end++;
+        }
+
+
+        /* xrightarrow may have an optional [below] argument. */
+        if (
+            best.command === "\\xrightarrow" &&
+            latex[end] === "["
+        ) {
+
+            const afterBracket =
+                consumeBalancedGroup(
+                    latex,
+                    end,
+                    "[",
+                    "]"
+                );
+
+            if (afterBracket > end) {
+                end = afterBracket;
+            }
+
+            while (
+                end < latex.length &&
+                /\s/.test(latex[end])
+            ) {
+                end++;
+            }
+        }
+
+
+        /*
+         STACK questions commonly use a braced annotation after
+         longrightarrow as well, not only after xrightarrow.
+        */
+        if (latex[end] === "{") {
+
+            const afterBrace =
+                consumeBalancedGroup(
+                    latex,
+                    end,
+                    "{",
+                    "}"
+                );
+
+            if (afterBrace > end) {
+                end = afterBrace;
+            }
+        }
+    }
+
+
+    return {
+        index: best.index,
+        end: end,
+        raw: latex.slice(
+            best.index,
+            end
+        ),
+        command: best.command
+    };
+}
 
 
 /* =========================================================
@@ -709,17 +895,17 @@ function coreSpecies(s) {
      Keep common chemistry/nuclear symbols meaningful.
     */
     s = s
-        .replace(/\alpha/g, "α")
-        .replace(/\beta/g, "β")
-        .replace(/\gamma/g, "γ")
-        .replace(/\omega/g, "ω");
+        .replace(/\\alpha/g, "α")
+        .replace(/\\beta/g, "β")
+        .replace(/\\gamma/g, "γ")
+        .replace(/\\omega/g, "ω");
 
 
     /*
      Remove remaining LaTeX command names.
     */
     s = s.replace(
-        /\[A-Za-z]+/g,
+        /\\[A-Za-z]+/g,
         ""
     );
 
@@ -954,9 +1140,9 @@ function processChem(latex) {
         latex ?? ""
     );
 
-    const arrowMatch =
-        latex.match(
-            REACTION_ARROW_RE
+    const arrowInfo =
+        findReactionArrow(
+            latex
         );
 
 
@@ -964,7 +1150,7 @@ function processChem(latex) {
        SINGLE FORMULA
        ----------------------------------------------------- */
 
-    if (!arrowMatch) {
+    if (!arrowInfo) {
 
         const term =
             parseTerm(latex);
@@ -1001,18 +1187,17 @@ function processChem(latex) {
        ----------------------------------------------------- */
 
     const arrowText =
-        arrowMatch[0];
+        arrowInfo.raw;
 
     const leftText =
         latex.slice(
             0,
-            arrowMatch.index
+            arrowInfo.index
         );
 
     const rightText =
         latex.slice(
-            arrowMatch.index +
-            arrowText.length
+            arrowInfo.end
         );
 
     const left =
