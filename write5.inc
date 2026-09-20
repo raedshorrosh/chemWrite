@@ -1,5 +1,5 @@
 [[iframe width="100%" height="450px"]]
-r200
+Raed 300
 [[script src="https://unpkg.com/mathlive@0.110.0"]][[/script]]
 
 [[style]]
@@ -510,29 +510,19 @@ function cleanLatex(s) {
 
     } while (s !== previous);
 
+    /*
+     Do NOT remove _{}, ^{} or nested braces here.
+     normalizeScripts() handles them structurally and
+     recursively, which avoids creating stray underscores
+     from MathLive artifacts such as:
+
+       NH_4Cl_{(s)_{_{_{_{}}}}}
+    */
     s = s
         .replace(/\\left/g, "")
         .replace(/\\right/g, "")
         .replace(/\\[,;!]/g, "")
         .replace(/\s+/g, "");
-
-    /*
-     Empty subscript/superscript:
-       H_2^{}  -> H_2
-       H_2_{}  -> H_2
-    */
-    s = s.replace(
-        /[_^]\{\}/g,
-        ""
-    );
-
-    /*
-     Remaining harmless empty braces.
-    */
-    s = s.replace(
-        /\{\}/g,
-        ""
-    );
 
     return s;
 }
@@ -771,7 +761,20 @@ function normalizeScripts(s) {
 
         let parsed = readScriptArgument(i);
 
-        let combined = parsed.content;
+        /*
+         IMPORTANT:
+         Recursively normalize the CONTENT of the script.
+
+         Example:
+           _{(s)_{_{_{_{}}}}}
+
+         The inner empty script chain is removed first,
+         leaving:
+           _{(s)}
+        */
+        let combined = normalizeScripts(
+            parsed.content
+        );
 
         i = parsed.end;
 
@@ -792,7 +795,9 @@ function normalizeScripts(s) {
 
             parsed = readScriptArgument(i);
 
-            combined += parsed.content;
+            combined += normalizeScripts(
+                parsed.content
+            );
 
             i = parsed.end;
         }
@@ -800,6 +805,13 @@ function normalizeScripts(s) {
 
         /*
          Empty script has no visible meaning.
+
+           _{}
+           ^{}
+           _{_{}}
+           _{_{_{}}}
+
+         all disappear.
         */
         if (combined === "") {
             continue;
@@ -819,6 +831,15 @@ function normalizeScripts(s) {
                 canonicalizeChargeContent(
                     combined
                 );
+        }
+
+
+        /*
+         canonicalizeChargeContent() may theoretically
+         return an empty string. If so, remove the script.
+        */
+        if (combined === "") {
+            continue;
         }
 
 
