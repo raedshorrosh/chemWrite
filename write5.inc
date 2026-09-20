@@ -4,14 +4,11 @@
 
 [[style]]
 
-/* Hide MathLive default keyboard/menu controls */
 math-field::part(virtual-keyboard-toggle),
 math-field::part(menu-toggle) {
     display: none !important;
 }
 
-
-/* Labels above the chemistry input fields */
 #mathfields-container label {
     background-color: #f4f8fa !important;
     color: #0073a5 !important;
@@ -31,10 +28,6 @@ math-field::part(menu-toggle) {
 
 [[/style]]
 
-
-<!-- =======================================================
-     DATA FROM STACK
-     ======================================================= -->
 
 <div style="display:none;">
 
@@ -57,10 +50,6 @@ math-field::part(menu-toggle) {
 </div>
 
 
-<!-- =======================================================
-     MAIN INTERFACE
-     ======================================================= -->
-
 <div
     style="
         font-family:sans-serif;
@@ -68,8 +57,6 @@ math-field::part(menu-toggle) {
         box-sizing:border-box;
     "
 >
-
-    <!-- Symbol palette -->
 
     <div
         id="button-palette"
@@ -100,7 +87,6 @@ math-field::part(menu-toggle) {
             Symbols & Templates
         </div>
 
-
         <div
             id="preset-buttons-container"
             style="
@@ -114,8 +100,6 @@ math-field::part(menu-toggle) {
 
     </div>
 
-
-    <!-- Chemistry input fields -->
 
     <div
         id="mathfields-container"
@@ -133,42 +117,43 @@ math-field::part(menu-toggle) {
 [[script type="module"]]
 
 
-/* ==========================================================
-   FORCE HIDE MATHLIVE ICONS
-   ========================================================== */
+/* =========================================================
+   HIDE MATHLIVE ICONS
+   ========================================================= */
 
-const hideIconsStyle = document.createElement("style");
+const hideIconsStyle =
+    document.createElement("style");
 
 hideIconsStyle.textContent = `
     math-field::part(virtual-keyboard-toggle),
     math-field::part(menu-toggle) {
-        display: none !important;
+        display:none !important;
     }
 `;
 
-document.head.appendChild(hideIconsStyle);
+document.head.appendChild(
+    hideIconsStyle
+);
 
 
 
-/* ==========================================================
-   STACK JAVASCRIPT API
-   ========================================================== */
+/* =========================================================
+   STACK API
+   ========================================================= */
 
-import {stack_js} from '[[cors src="stackjsiframe.js"/]]';
-
-
-
-/* ==========================================================
-   GENERAL HELPER FUNCTIONS
-   ========================================================== */
+import {stack_js}
+from '[[cors src="stackjsiframe.js"/]]';
 
 
-/*
- Safely obtain text inserted by STACK into a hidden div.
-*/
+
+/* =========================================================
+   STACK DATA HELPERS
+   ========================================================= */
+
 function getStackData(id) {
 
-    const el = document.getElementById(id);
+    const el =
+        document.getElementById(id);
 
     if (!el) {
         return null;
@@ -179,13 +164,12 @@ function getStackData(id) {
         el.textContent ||
         "";
 
-    txt = txt.trim();
+    txt =
+        txt.trim();
 
-    /*
-     This indicates that STACK did not replace
-     the CAS text.
-    */
-    if (txt.includes("{#")) {
+    if (
+        txt.includes("{#")
+    ) {
         return null;
     }
 
@@ -194,39 +178,51 @@ function getStackData(id) {
 
 
 
-/*
- Parse JSON produced by stackjson_stringify().
-*/
-function parseStackJSON(id, fallback) {
+function parseStackJSON(
+    id,
+    fallback
+) {
 
     try {
 
-        const rawData = getStackData(id);
+        const raw =
+            getStackData(id);
 
-        if (!rawData) {
+        if (!raw) {
             return fallback;
         }
 
-        let parsed = JSON.parse(rawData);
 
-        /*
-         Occasionally STACK data may itself
-         contain an encoded JSON string.
-        */
-        if (typeof parsed === "string") {
+        let parsed =
+            JSON.parse(raw);
+
+
+        if (
+            typeof parsed ===
+            "string"
+        ) {
 
             try {
-                parsed = JSON.parse(parsed);
+
+                parsed =
+                    JSON.parse(parsed);
+
             }
             catch (e) {
+
                 return [parsed];
             }
-
         }
 
-        if (!Array.isArray(parsed)) {
-            parsed = [parsed];
+
+        if (
+            !Array.isArray(parsed)
+        ) {
+
+            parsed =
+                [parsed];
         }
+
 
         return parsed;
 
@@ -234,7 +230,7 @@ function parseStackJSON(id, fallback) {
     catch (e) {
 
         console.warn(
-            "Could not parse STACK JSON:",
+            "STACK JSON error:",
             id,
             e
         );
@@ -245,21 +241,19 @@ function parseStackJSON(id, fallback) {
 
 
 
-/*
- Read a simple STACK string.
-*/
-function parseStackString(id, fallback = "") {
+function parseStackString(
+    id,
+    fallback = ""
+) {
 
-    let raw = getStackData(id);
+    let raw =
+        getStackData(id);
 
     if (!raw) {
         return fallback;
     }
 
-    /*
-     If STACK supplied a JSON-style quoted string,
-     decode it properly.
-    */
+
     try {
 
         if (
@@ -273,47 +267,43 @@ function parseStackString(id, fallback = "") {
     }
     catch (e) {}
 
-    /*
-     Otherwise simply remove surrounding quotes.
-    */
-    return raw.replace(/^["']|["']$/g, "");
+
+    return raw.replace(
+        /^["']|["']$/g,
+        ""
+    );
 }
 
 
 
-/*
- MathLive helper.
-*/
-function renderMathInElementSafe(element) {
+function renderMathInElementSafe(
+    element
+) {
 
     try {
 
         if (
             window.MathLive &&
-            typeof window.MathLive.renderMathInElement ===
+            typeof window.MathLive
+                .renderMathInElement ===
                 "function"
         ) {
 
-            window.MathLive.renderMathInElement(
-                element
-            );
+            window.MathLive
+                .renderMathInElement(
+                    element
+                );
         }
 
     }
-    catch (e) {
-
-        console.warn(
-            "MathLive rendering problem:",
-            e
-        );
-    }
+    catch (e) {}
 }
 
 
 
-/* ==========================================================
-   LOAD STACK DATA
-   ========================================================== */
+/* =========================================================
+   READ STACK VARIABLES
+   ========================================================= */
 
 let tas =
     parseStackJSON(
@@ -321,11 +311,13 @@ let tas =
         []
     );
 
+
 let prefixes =
     parseStackJSON(
         "data-prefixes",
         []
     );
+
 
 let titles =
     parseStackJSON(
@@ -333,11 +325,13 @@ let titles =
         []
     );
 
+
 let texs =
     parseStackJSON(
         "data-tex",
         []
     );
+
 
 let errorMessages =
     parseStackJSON(
@@ -346,7 +340,8 @@ let errorMessages =
     );
 
 
-let partialCredit = 0.5;
+let partialCredit =
+    0.5;
 
 
 try {
@@ -358,8 +353,11 @@ try {
             )
         );
 
+
     if (!isNaN(pc)) {
-        partialCredit = pc;
+
+        partialCredit =
+            pc;
     }
 
 }
@@ -367,15 +365,16 @@ catch (e) {}
 
 
 
-/* ==========================================================
+/* =========================================================
    PALETTE TITLE
-   ========================================================== */
+   ========================================================= */
 
 const paletteTitle =
     parseStackString(
         "data-palette-title",
         ""
     );
+
 
 if (paletteTitle) {
 
@@ -387,73 +386,53 @@ if (paletteTitle) {
 
 
 
-/* ==========================================================
+/* =========================================================
    CHEMISTRY ENGINE
-   ========================================================== */
+   ========================================================= */
 
-
-/*
- Recognised reaction arrows.
-*/
 const REACTION_ARROW_RE =
     /\\xrightarrow(?:\[[^\]]*\])?\{[^{}]*\}|\\rightleftharpoons|\\longrightarrow(?:\{\})?|\\rightarrow(?:\{\})?|\\Rightarrow(?:\{\})?|=/;
 
 
 
-/*
- Remove harmless LaTeX presentation differences.
+/* =========================================================
+   BASIC LATEX CLEANING
+   ========================================================= */
 
- IMPORTANT:
- Capitalization is NOT changed.
-
- Therefore:
-
- CO != Co
-
- which is essential in chemistry.
-*/
 function cleanLatex(s) {
 
-    s = String(
-        s ?? ""
-    );
+    s =
+        String(
+            s ?? ""
+        );
 
 
-    /*
-     Remove:
-     \textcolor{red}{H_2O}
-
-     while keeping:
-     H_2O
-    */
-    s = s.replace(
-        /\\textcolor\{[^{}]*\}\{([^{}]*)\}/g,
-        "$1"
-    );
-
-
-    /*
-     Remove formatting wrappers while preserving
-     their contents.
-
-     Examples:
-
-     \mathbf{+}
-     \mathrm{aq}
-    */
-    let previous;
-
-    do {
-
-        previous = s;
-
-        s = s.replace(
-            /\\(?:mathbf|mathrm|mathit|mathsf|mathtt)\{([^{}]*)\}/g,
+    s =
+        s.replace(
+            /\\textcolor\{[^{}]*\}\{([^{}]*)\}/g,
             "$1"
         );
 
+
+    let previous;
+
+
+    do {
+
+        previous =
+            s;
+
+
+        s =
+            s.replace(
+                /\\(?:mathbf|mathrm|mathit|mathsf|mathtt)\{([^{}]*)\}/g,
+                "$1"
+            );
+
     }
-    while (s !== previous);
+    while (
+        s !== previous
+    );
 
 
     return s
@@ -486,211 +465,309 @@ function cleanLatex(s) {
 
 
 
-/*
- Normalize different reaction arrows.
+/* =========================================================
+   NORMALIZE DOUBLE SUBSCRIPT / SUPERSCRIPT
 
- Long arrows are treated as ordinary forward
- reaction arrows.
-*/
-function normalizeArrow(arrow) {
+   Examples:
 
-    const s =
-        cleanLatex(
-            arrow
-        );
+   C_3H_8_{(g)}
+          ↓
+   C_3H_{8(g)}
+
+   C_3H_{8(g)}
+          ↓
+   C_3H_{8(g)}
+
+   C_{3}H_8_{(g)}
+          ↓
+   C_3H_{8(g)}
+
+   ========================================================= */
+
+function normalizeScripts(s) {
+
+    let result =
+        "";
+
+    let i =
+        0;
 
 
-    if (
-        s.includes(
-            "\\rightleftharpoons"
-        )
+
+    function readScriptArgument(
+        start
     ) {
 
-        return "<=>";
-    }
-
-
-    if (
-        s.includes("\\xrightarrow") ||
-        s.includes("\\longrightarrow") ||
-        s.includes("\\rightarrow") ||
-        s.includes("\\Rightarrow")
-    ) {
-
-        return "->";
-    }
-
-
-    if (s === "=") {
-        return "=";
-    }
-
-
-    return s;
-}
-
-
-
-/*
- Split one reaction side into chemical terms.
-
- Example:
-
- 2H_2 + O_2 + Fe^{3+}
-
- must split only at the PLUS SIGNS
- separating compounds.
-
- A + sign which is part of an ionic
- charge must NOT split the expression.
-*/
-function splitTerms(side) {
-
-    const terms = [];
-
-    let current = "";
-
-    let braces = 0;
-    let parentheses = 0;
-    let brackets = 0;
-
-
-    for (
-        let i = 0;
-        i < side.length;
-        i++
-    ) {
-
-        const ch =
-            side[i];
-
-
-        if (ch === "{") {
-
-            braces++;
-
-        }
-        else if (ch === "}") {
-
-            braces =
-                Math.max(
-                    0,
-                    braces - 1
-                );
-
-        }
-        else if (ch === "(") {
-
-            parentheses++;
-
-        }
-        else if (ch === ")") {
-
-            parentheses =
-                Math.max(
-                    0,
-                    parentheses - 1
-                );
-
-        }
-        else if (ch === "[") {
-
-            brackets++;
-
-        }
-        else if (ch === "]") {
-
-            brackets =
-                Math.max(
-                    0,
-                    brackets - 1
-                );
-        }
-
-
-        /*
-         Potential separator.
-        */
         if (
-            ch === "+" &&
-            braces === 0 &&
-            parentheses === 0 &&
-            brackets === 0
+            start >= s.length
         ) {
 
-            const before =
-                current.trim();
+            return {
+                content: "",
+                end: start
+            };
+        }
 
 
-            /*
-             Do not split:
 
-             H^+
-             Fe^3+
+        /* ---------------------------------------------
+           BRACED ARGUMENT
+           --------------------------------------------- */
 
-             In forms such as ^{+},
-             brace depth already protects
-             the plus sign.
-            */
-            const chargePlus =
-                /\^\d*$/.test(
-                    before
-                );
+        if (
+            s[start] === "{"
+        ) {
+
+            let depth =
+                1;
+
+            let j =
+                start + 1;
+
+            let content =
+                "";
 
 
-            if (!chargePlus) {
+            while (
+                j < s.length &&
+                depth > 0
+            ) {
 
-                if (before !== "") {
+                if (
+                    s[j] === "{"
+                ) {
 
-                    terms.push(
-                        before
-                    );
+                    depth++;
+
+                    if (
+                        depth > 1
+                    ) {
+
+                        content +=
+                            s[j];
+                    }
+
+                }
+
+                else if (
+                    s[j] === "}"
+                ) {
+
+                    depth--;
+
+                    if (
+                        depth > 0
+                    ) {
+
+                        content +=
+                            s[j];
+                    }
+
+                }
+
+                else {
+
+                    content +=
+                        s[j];
                 }
 
 
-                current = "";
-
-                continue;
+                j++;
             }
+
+
+            return {
+
+                content:
+                    content,
+
+                end:
+                    j
+            };
         }
 
 
-        current += ch;
+
+        /* ---------------------------------------------
+           LATEX COMMAND
+           --------------------------------------------- */
+
+        if (
+            s[start] === "\\"
+        ) {
+
+            let j =
+                start + 1;
+
+
+            while (
+                j < s.length &&
+                /[A-Za-z]/.test(
+                    s[j]
+                )
+            ) {
+
+                j++;
+            }
+
+
+            return {
+
+                content:
+                    s.slice(
+                        start,
+                        j
+                    ),
+
+                end:
+                    j
+            };
+        }
+
+
+
+        /* ---------------------------------------------
+           SINGLE CHARACTER
+           --------------------------------------------- */
+
+        return {
+
+            content:
+                s[start],
+
+            end:
+                start + 1
+        };
     }
 
 
-    if (
-        current.trim() !== ""
+
+    while (
+        i < s.length
     ) {
 
-        terms.push(
-            current.trim()
-        );
+        const ch =
+            s[i];
+
+
+        if (
+            ch !== "_" &&
+            ch !== "^"
+        ) {
+
+            result +=
+                ch;
+
+            i++;
+
+            continue;
+        }
+
+
+
+        const operator =
+            ch;
+
+
+        i++;
+
+
+        let parsed =
+            readScriptArgument(
+                i
+            );
+
+
+        let combined =
+            parsed.content;
+
+
+        i =
+            parsed.end;
+
+
+
+        /*
+         Merge consecutive scripts of the SAME kind.
+
+         H_8_{(g)}
+
+         becomes:
+
+         H_{8(g)}
+        */
+
+        while (
+
+            i < s.length &&
+
+            s[i] === operator
+
+        ) {
+
+            i++;
+
+
+            parsed =
+                readScriptArgument(
+                    i
+                );
+
+
+            combined +=
+                parsed.content;
+
+
+            i =
+                parsed.end;
+        }
+
+
+
+        /*
+         One-character script:
+
+         _3  stays _3
+
+         Longer script:
+
+         _8_(g)
+
+         becomes:
+
+         _{8(g)}
+        */
+
+        if (
+            combined.length === 1
+        ) {
+
+            result +=
+                operator +
+                combined;
+
+        }
+
+        else {
+
+            result +=
+                operator +
+                "{" +
+                combined +
+                "}";
+        }
     }
 
 
-    return terms;
+    return result;
 }
 
 
 
-/*
- Exact species normalization.
+/* =========================================================
+   EXACT SPECIES NORMALIZATION
+   ========================================================= */
 
- Examples:
-
- H_{2}O
- H_2O
-
- become equivalent.
-
- But:
-
- CO
- Co
-
- remain DIFFERENT.
-*/
 function exactSpecies(s) {
 
     s =
@@ -699,46 +776,28 @@ function exactSpecies(s) {
         );
 
 
-    return s.replace(
-        /[{}]/g,
-        ""
-    );
+    s =
+        normalizeScripts(
+            s
+        );
+
+
+    return s;
 }
 
 
 
-/*
- Create the chemistry "core".
+/* =========================================================
+   CORE SPECIES NORMALIZATION
 
- This deliberately ignores:
+   Used for detecting formatting errors.
 
- - subscript formatting
- - superscript formatting
- - physical-state notation
+   States and script formatting are ignored,
+   but chemical capitalization is preserved.
 
- It PRESERVES:
+   CO != Co
+   ========================================================= */
 
- - element capitalization
- - atom numbers
- - ionic charge signs
-
- Example:
-
- CO_{2(g)}
- CO_2
- CO2
-
- all become approximately:
-
- CO2
-
- But:
-
- Co
- CO
-
- remain different.
-*/
 function coreSpecies(s) {
 
     s =
@@ -748,25 +807,23 @@ function coreSpecies(s) {
 
 
     /*
-     Remove states:
+     Remove physical states even if they are
+     contained inside a subscript.
 
-     _(g)
-     (g)
-
-     _(l)
-     (aq)
-     etc.
+     H_{2(g)}
+        →
+     H_{2}
     */
-    s = s.replace(
-        /_?\((?:aq|g|l|s)\)/g,
-        ""
-    );
+
+    s =
+        s.replace(
+            /\((?:aq|g|l|s)\)/g,
+            ""
+        );
 
 
-    /*
-     Preserve useful special chemistry symbols.
-    */
-    s = s
+    s =
+        s
 
         .replace(
             /\\alpha/g,
@@ -792,22 +849,24 @@ function coreSpecies(s) {
     /*
      Remove remaining LaTeX commands.
     */
-    s = s.replace(
-        /\\[A-Za-z]+/g,
-        ""
-    );
+
+    s =
+        s.replace(
+            /\\[A-Za-z]+/g,
+            ""
+        );
 
 
     /*
-     Ignore formatting symbols.
-
-     Do NOT remove + or -
-     because ionic charge matters.
+     Remove notation formatting,
+     but keep numbers and charges.
     */
-    s = s.replace(
-        /[_^{}()[\]]/g,
-        ""
-    );
+
+    s =
+        s.replace(
+            /[_^{}()[\]]/g,
+            ""
+        );
 
 
     return s;
@@ -815,20 +874,253 @@ function coreSpecies(s) {
 
 
 
-/*
- Parse:
+/* =========================================================
+   NORMALIZE ARROW
+   ========================================================= */
 
- 2C_2H_6
+function normalizeArrow(
+    arrow
+) {
 
- into:
+    const s =
+        cleanLatex(
+            arrow
+        );
 
- coefficient = 2
- species     = C_2H_6
 
- If no coefficient exists,
- coefficient = 1.
-*/
-function parseTerm(term) {
+    if (
+        s.includes(
+            "\\rightleftharpoons"
+        )
+    ) {
+
+        return "<=>";
+    }
+
+
+    if (
+
+        s.includes(
+            "\\xrightarrow"
+        )
+
+        ||
+
+        s.includes(
+            "\\longrightarrow"
+        )
+
+        ||
+
+        s.includes(
+            "\\rightarrow"
+        )
+
+        ||
+
+        s.includes(
+            "\\Rightarrow"
+        )
+
+    ) {
+
+        return "->";
+    }
+
+
+    if (
+        s === "="
+    ) {
+
+        return "=";
+    }
+
+
+    return s;
+}
+
+
+
+/* =========================================================
+   SPLIT REACTION INTO TERMS
+   ========================================================= */
+
+function splitTerms(
+    side
+) {
+
+    const terms =
+        [];
+
+
+    let current =
+        "";
+
+
+    let braces =
+        0;
+
+
+    let parentheses =
+        0;
+
+
+    let brackets =
+        0;
+
+
+
+    for (
+        let i = 0;
+        i < side.length;
+        i++
+    ) {
+
+        const ch =
+            side[i];
+
+
+        if (
+            ch === "{"
+        ) {
+
+            braces++;
+
+        }
+
+        else if (
+            ch === "}"
+        ) {
+
+            braces =
+                Math.max(
+                    0,
+                    braces - 1
+                );
+
+        }
+
+        else if (
+            ch === "("
+        ) {
+
+            parentheses++;
+
+        }
+
+        else if (
+            ch === ")"
+        ) {
+
+            parentheses =
+                Math.max(
+                    0,
+                    parentheses - 1
+                );
+
+        }
+
+        else if (
+            ch === "["
+        ) {
+
+            brackets++;
+
+        }
+
+        else if (
+            ch === "]"
+        ) {
+
+            brackets =
+                Math.max(
+                    0,
+                    brackets - 1
+                );
+        }
+
+
+
+        if (
+
+            ch === "+" &&
+
+            braces === 0 &&
+
+            parentheses === 0 &&
+
+            brackets === 0
+
+        ) {
+
+            const before =
+                current.trim();
+
+
+            /*
+             Protect unbraced ionic charge:
+             H^+
+             Fe^3+
+            */
+
+            const chargePlus =
+                /\^\d*$/.test(
+                    before
+                );
+
+
+            if (
+                !chargePlus
+            ) {
+
+                if (
+                    before !== ""
+                ) {
+
+                    terms.push(
+                        before
+                    );
+                }
+
+
+                current =
+                    "";
+
+
+                continue;
+            }
+        }
+
+
+        current +=
+            ch;
+    }
+
+
+
+    if (
+        current.trim() !==
+        ""
+    ) {
+
+        terms.push(
+            current.trim()
+        );
+    }
+
+
+    return terms;
+}
+
+
+
+/* =========================================================
+   PARSE TERM
+   ========================================================= */
+
+function parseTerm(
+    term
+) {
 
     let s =
         exactSpecies(
@@ -836,9 +1128,12 @@ function parseTerm(term) {
         );
 
 
-    let coefficient = 1;
+    let coefficient =
+        1;
 
-    let body = s;
+
+    let body =
+        s;
 
 
     const match =
@@ -847,12 +1142,15 @@ function parseTerm(term) {
         );
 
 
-    if (match) {
+    if (
+        match
+    ) {
 
         coefficient =
             Number(
                 match[1]
             );
+
 
         body =
             match[2];
@@ -878,21 +1176,10 @@ function parseTerm(term) {
 
 
 
-/*
- Make a standard representation of one
- reaction side.
+/* =========================================================
+   SIDE SIGNATURE
+   ========================================================= */
 
- Sorting means:
-
- H2 + O2
-
- and:
-
- O2 + H2
-
- can be recognised as the same set
- of species.
-*/
 function sideSignature(
     terms,
     mode,
@@ -927,10 +1214,13 @@ function sideSignature(
 
 
 
-/*
- Main chemistry parser.
-*/
-function processChem(latex) {
+/* =========================================================
+   PROCESS CHEMICAL EXPRESSION
+   ========================================================= */
+
+function processChem(
+    latex
+) {
 
     latex =
         String(
@@ -944,11 +1234,14 @@ function processChem(latex) {
         );
 
 
-    /* ======================================================
-       SINGLE FORMULA
-       ====================================================== */
 
-    if (!arrowMatch) {
+    /* =====================================================
+       SINGLE FORMULA
+       ===================================================== */
+
+    if (
+        !arrowMatch
+    ) {
 
         const term =
             parseTerm(
@@ -964,37 +1257,29 @@ function processChem(latex) {
             parsedTerm:
                 term,
 
-
             exact:
-
                 term.coefficient +
                 ":" +
                 term.exact,
 
-
             core:
-
                 term.coefficient +
                 ":" +
                 term.core,
 
-
             speciesExact:
-
                 term.exact,
 
-
             speciesCore:
-
                 term.core
         };
     }
 
 
 
-    /* ======================================================
-       FULL REACTION
-       ====================================================== */
+    /* =====================================================
+       COMPLETE REACTION
+       ===================================================== */
 
     const arrowText =
         arrowMatch[0];
@@ -1051,10 +1336,6 @@ function processChem(latex) {
             arrow,
 
 
-        /*
-         Exact chemistry +
-         exact coefficients.
-        */
         exact:
 
             sideSignature(
@@ -1078,10 +1359,6 @@ function processChem(latex) {
             ),
 
 
-        /*
-         Core chemistry +
-         coefficients.
-        */
         core:
 
             sideSignature(
@@ -1105,10 +1382,6 @@ function processChem(latex) {
             ),
 
 
-        /*
-         Exact compounds,
-         coefficients ignored.
-        */
         speciesExact:
 
             sideSignature(
@@ -1132,10 +1405,6 @@ function processChem(latex) {
             ),
 
 
-        /*
-         Core compounds,
-         coefficients ignored.
-        */
         speciesCore:
 
             sideSignature(
@@ -1162,19 +1431,10 @@ function processChem(latex) {
 
 
 
-/* ==========================================================
-   STOICHIOMETRIC PROPORTIONALITY
-   ========================================================== */
+/* =========================================================
+   STOICHIOMETRIC MAP
+   ========================================================= */
 
-
-/*
- Build:
-
- LEFT/RIGHT + compound -> coefficient
-
- This permits checking whether the student's
- coefficients are proportional to the teacher's.
-*/
 function makeStoichiometricMap(
     reaction,
     mode
@@ -1234,20 +1494,21 @@ function makeStoichiometricMap(
 
 
 
-/*
- Determines whether coefficients are all
- multiplied by the same factor.
+/* =========================================================
+   TEST WHETHER COEFFICIENTS ARE PROPORTIONAL
 
- Example teacher:
+   Example:
 
- 2C2H6 + 7O2 -> 4CO2 + 6H2O
+   Teacher:
+   2C2H6 + 7O2 -> 4CO2 + 6H2O
 
- Student:
+   Student:
+   4C2H6 + 14O2 -> 8CO2 + 12H2O
 
- 4C2H6 + 14O2 -> 8CO2 + 12H2O
+   Result:
+   correct
+   ========================================================= */
 
- This returns TRUE.
-*/
 function coefficientsAreProportional(
     student,
     teacher,
@@ -1255,8 +1516,11 @@ function coefficientsAreProportional(
 ) {
 
     if (
+
         !student.isReaction ||
+
         !teacher.isReaction
+
     ) {
 
         return false;
@@ -1298,8 +1562,10 @@ function coefficientsAreProportional(
     let baseStudent =
         null;
 
+
     let baseTeacher =
         null;
+
 
 
     for (
@@ -1330,21 +1596,14 @@ function coefficientsAreProportional(
             baseStudent =
                 studentCoefficient;
 
+
             baseTeacher =
                 teacherCoefficient;
 
         }
+
         else {
 
-            /*
-             Instead of division:
-
-             student / teacher
-             ==
-             baseStudent / baseTeacher
-
-             use cross multiplication.
-            */
             if (
 
                 studentCoefficient *
@@ -1368,9 +1627,9 @@ function coefficientsAreProportional(
 
 
 
-/* ==========================================================
-   PROCESS TEACHER ANSWERS
-   ========================================================== */
+/* =========================================================
+   PREPROCESS TEACHER ANSWERS
+   ========================================================= */
 
 const teacherDataArray =
     tas.map(
@@ -1382,9 +1641,9 @@ const teacherDataArray =
 
 
 
-/* ==========================================================
-   UI REFERENCES
-   ========================================================== */
+/* =========================================================
+   UI
+   ========================================================= */
 
 const btnContainer =
     document.getElementById(
@@ -1398,16 +1657,18 @@ const container =
     );
 
 
-let mfs = [];
+let mfs =
+    [];
+
 
 let activeMathField =
     null;
 
 
 
-/* ==========================================================
-   CREATE THE MATH FIELDS
-   ========================================================== */
+/* =========================================================
+   CREATE MATH FIELDS
+   ========================================================= */
 
 tas.forEach(
     (ta, index) => {
@@ -1436,10 +1697,6 @@ tas.forEach(
         `;
 
 
-
-        /* --------------------------------------------------
-           TITLE
-           -------------------------------------------------- */
 
         if (
             titles[index]
@@ -1492,10 +1749,6 @@ tas.forEach(
 
 
 
-        /* --------------------------------------------------
-           ROW
-           -------------------------------------------------- */
-
         const mfRow =
             document.createElement(
                 "div"
@@ -1509,10 +1762,6 @@ tas.forEach(
         `;
 
 
-
-        /* --------------------------------------------------
-           MATH FIELD
-           -------------------------------------------------- */
 
         const mf =
             document.createElement(
@@ -1540,10 +1789,6 @@ tas.forEach(
 
 
 
-        /* --------------------------------------------------
-           FOCUS
-           -------------------------------------------------- */
-
         mf.addEventListener(
             "focusin",
             () => {
@@ -1562,22 +1807,20 @@ tas.forEach(
                     );
 
 
-                /*
-                 Move the palette immediately above
-                 the currently active field.
-                */
                 if (
                     palette &&
                     wrapper.parentNode
                 ) {
 
-                    wrapper.parentNode.insertBefore(
-                        palette,
-                        wrapper
-                    );
+                    wrapper.parentNode
+                        .insertBefore(
+                            palette,
+                            wrapper
+                        );
                 }
             }
         );
+
 
 
         mf.addEventListener(
@@ -1588,6 +1831,7 @@ tas.forEach(
                     "0 2px 4px rgba(0,0,0,0.05)";
             }
         );
+
 
 
         mfRow.appendChild(
@@ -1629,9 +1873,9 @@ if (
 
 
 
-/* ==========================================================
-   CREATE SYMBOL / TEMPLATE BUTTONS
-   ========================================================== */
+/* =========================================================
+   PALETTE BUTTONS
+   ========================================================= */
 
 for (
     let i = 0;
@@ -1644,6 +1888,7 @@ for (
     let insertTex;
 
 
+
     if (
         Array.isArray(
             texs[i]
@@ -1654,23 +1899,22 @@ for (
             texs[i][0];
 
 
-        /*
-         Empty second value means:
-         insert the visible value.
-        */
         insertTex =
             texs[i][1] ||
             texs[i][0];
 
     }
+
     else {
 
         displayTex =
             texs[i];
 
+
         insertTex =
             texs[i];
     }
+
 
 
     const btn =
@@ -1704,6 +1948,7 @@ for (
             btn.style.backgroundColor =
                 "#e2e6ea";
 
+
             btn.style.boxShadow =
                 "0 2px 4px rgba(0,0,0,0.1)";
         }
@@ -1717,6 +1962,7 @@ for (
 
             btn.style.backgroundColor =
                 "#f8f9fa";
+
 
             btn.style.boxShadow =
                 "none";
@@ -1766,10 +2012,6 @@ for (
 
 
 
-    /* ------------------------------------------------------
-       BUTTON CLICK
-       ------------------------------------------------------ */
-
     btn.addEventListener(
         "click",
         e => {
@@ -1787,27 +2029,29 @@ for (
             }
 
 
-            /*
-             Special cursor movement buttons.
-            */
+
             if (
                 insertTex === "^"
             ) {
 
-                activeMathField.executeCommand(
-                    "moveToSuperscript"
-                );
+                activeMathField
+                    .executeCommand(
+                        "moveToSuperscript"
+                    );
 
             }
+
             else if (
                 insertTex === "_"
             ) {
 
-                activeMathField.executeCommand(
-                    "moveToSubscript"
-                );
+                activeMathField
+                    .executeCommand(
+                        "moveToSubscript"
+                    );
 
             }
+
             else {
 
                 activeMathField.insert(
@@ -1828,9 +2072,9 @@ for (
 
 
 
-/* ==========================================================
-   STACK INPUT ACCESS
-   ========================================================== */
+/* =========================================================
+   STACK INPUTS
+   ========================================================= */
 
 Promise.all([
 
@@ -1868,17 +2112,13 @@ Promise.all([
         ) {
 
             console.error(
-                "STACK answer inputs could not be found."
+                "STACK inputs not found."
             );
 
             return;
         }
 
 
-
-        /* ==================================================
-           DETERMINE WHETHER QUESTION IS LOCKED
-           ================================================== */
 
         const isLocked =
 
@@ -1896,9 +2136,9 @@ Promise.all([
 
 
 
-        /* ==================================================
-           EVALUATE STUDENT ANSWERS
-           ================================================== */
+        /* =================================================
+           STUDENT EVALUATION
+           ================================================= */
 
         function evaluateStudent() {
 
@@ -1913,11 +2153,14 @@ Promise.all([
             let currentAnswers =
                 [];
 
+
             let currentGrades =
                 [];
 
+
             let currentErrors =
                 [];
+
 
 
             mfs.forEach(
@@ -1925,26 +2168,17 @@ Promise.all([
 
 
                     const rawLatex =
-                        mfObj.element.getValue(
-                            "latex"
-                        ) || "";
+                        mfObj.element
+                            .getValue(
+                                "latex"
+                            ) || "";
 
 
-                    /*
-                     JSON.stringify() will escape
-                     backslashes correctly.
-
-                     DO NOT manually double them here.
-                    */
                     currentAnswers.push(
                         rawLatex
                     );
 
 
-
-                    /* --------------------------------------
-                       EMPTY ANSWER
-                       -------------------------------------- */
 
                     if (
                         rawLatex.trim() ===
@@ -1955,9 +2189,11 @@ Promise.all([
                             0
                         );
 
+
                         currentErrors.push(
                             ""
                         );
+
 
                         return;
                     }
@@ -1993,9 +2229,9 @@ Promise.all([
 
 
 
-                    /* ======================================
-                       1. EXACT ANSWER
-                       ====================================== */
+                    /* =====================================
+                       EXACT ANSWER
+                       ===================================== */
 
                     if (
 
@@ -2004,22 +2240,15 @@ Promise.all([
 
                     ) {
 
-                        grade = 1;
+                        grade =
+                            1;
                     }
 
 
 
-                    /* ======================================
-                       2. BALANCED MULTIPLE
-
-                       Teacher:
-                       2C2H6 + 7O2 -> ...
-
-                       Student:
-                       4C2H6 + 14O2 -> ...
-
-                       BOTH RECEIVE 100%.
-                       ====================================== */
+                    /* =====================================
+                       PROPORTIONAL BALANCED REACTION
+                       ===================================== */
 
                     else if (
 
@@ -2035,17 +2264,16 @@ Promise.all([
 
                     ) {
 
-                        grade = 1;
+                        grade =
+                            1;
                     }
 
 
 
-                    /* ======================================
-                       3. CORRECT SPECIES / STATES /
-                          FORMATTING
-
-                          COEFFICIENTS WRONG
-                       ====================================== */
+                    /* =====================================
+                       CORRECT SPECIES
+                       WRONG COEFFICIENTS
+                       ===================================== */
 
                     else if (
 
@@ -2068,12 +2296,9 @@ Promise.all([
 
 
 
-                    /* ======================================
-                       4. BALANCING CORRECT
-
-                          BUT SUBSCRIPTS / STATES /
-                          FORMATTING WRONG
-                       ====================================== */
+                    /* =====================================
+                       BALANCED BUT FORMATTING / STATES WRONG
+                       ===================================== */
 
                     else if (
 
@@ -2099,13 +2324,10 @@ Promise.all([
 
 
 
-                    /* ======================================
-                       5. SAME BASIC SPECIES
-
-                          BUT:
-                          coefficients wrong
-                          AND formatting wrong
-                       ====================================== */
+                    /* =====================================
+                       SAME BASIC SPECIES BUT BOTH
+                       COEFFICIENTS AND FORMAT WRONG
+                       ===================================== */
 
                     else if (
 
@@ -2132,12 +2354,10 @@ Promise.all([
 
 
 
-                    /* ======================================
-                       6. SINGLE CHEMICAL FORMULA
-
-                          Correct chemistry,
-                          bad formatting.
-                       ====================================== */
+                    /* =====================================
+                       SINGLE COMPOUND:
+                       CORRECT CORE, BAD FORMAT
+                       ===================================== */
 
                     else if (
 
@@ -2160,15 +2380,17 @@ Promise.all([
 
 
 
-                    /* ======================================
-                       7. WRONG CHEMISTRY
-                       ====================================== */
+                    /* =====================================
+                       WRONG CHEMISTRY
+                       ===================================== */
 
                     else {
 
                         currentInputErrors.push(
 
-                            errorMessages[2] ||
+                            errorMessages[2]
+
+                            ||
 
                             "הנוסחה לא נכונה"
                         );
@@ -2176,17 +2398,15 @@ Promise.all([
 
 
 
-                    /* --------------------------------------
-                       ERROR: UNBALANCED
-                       -------------------------------------- */
-
                     if (
                         isUnbalanced
                     ) {
 
                         currentInputErrors.push(
 
-                            errorMessages[0] ||
+                            errorMessages[0]
+
+                            ||
 
                             "התגובה לא מאוזנת נכון"
                         );
@@ -2194,17 +2414,15 @@ Promise.all([
 
 
 
-                    /* --------------------------------------
-                       ERROR: FORMAT / STATES
-                       -------------------------------------- */
-
                     if (
                         isBadFormat
                     ) {
 
                         currentInputErrors.push(
 
-                            errorMessages[1] ||
+                            errorMessages[1]
+
+                            ||
 
                             "בעיות במצבי צבירה או פורמט"
                         );
@@ -2219,19 +2437,16 @@ Promise.all([
 
                     currentErrors.push(
 
-                        currentInputErrors.join(
-                            "<br>"
-                        )
+                        currentInputErrors
+                            .join(
+                                "<br>"
+                            )
                     );
 
                 }
             );
 
 
-
-            /* ==============================================
-               WRITE TO STACK
-               ============================================== */
 
             const newAnsStr =
                 JSON.stringify(
@@ -2259,15 +2474,16 @@ Promise.all([
                     newAnsStr;
 
 
-                hiddenInput1.dispatchEvent(
+                hiddenInput1
+                    .dispatchEvent(
 
-                    new Event(
-                        "change",
-                        {
-                            bubbles:true
-                        }
-                    )
-                );
+                        new Event(
+                            "change",
+                            {
+                                bubbles:true
+                            }
+                        )
+                    );
             }
 
 
@@ -2281,23 +2497,24 @@ Promise.all([
                     newGradeStr;
 
 
-                hiddenInput2.dispatchEvent(
+                hiddenInput2
+                    .dispatchEvent(
 
-                    new Event(
-                        "change",
-                        {
-                            bubbles:true
-                        }
-                    )
-                );
+                        new Event(
+                            "change",
+                            {
+                                bubbles:true
+                            }
+                        )
+                    );
             }
         }
 
 
 
-        /* ==================================================
+        /* =================================================
            RESTORE SAVED ANSWERS
-           ================================================== */
+           ================================================= */
 
         let savedAnswers =
             [];
@@ -2343,20 +2560,14 @@ Promise.all([
                 }
 
             }
-            catch (e) {
-
-                console.warn(
-                    "Could not restore saved answers:",
-                    e
-                );
-            }
+            catch (e) {}
         }
 
 
 
-        /* ==================================================
-           LOAD PREFIXES OR SAVED ANSWERS
-           ================================================== */
+        /* =================================================
+           LOAD PREFIXES / SAVED VALUES
+           ================================================= */
 
         mfs.forEach(
             (mfObj, index) => {
@@ -2375,74 +2586,73 @@ Promise.all([
 
                 ) {
 
-                    mfObj.element.setValue(
+                    mfObj.element
+                        .setValue(
 
-                        savedAnswers[index],
+                            savedAnswers[
+                                index
+                            ],
 
-                        {
-                            suppressChangeNotifications:
-                                true
-                        }
-                    );
+                            {
+                                suppressChangeNotifications:
+                                    true
+                            }
+                        );
 
                 }
-
 
                 else if (
                     prefixes[index]
                 ) {
 
-                    mfObj.element.setValue(
+                    mfObj.element
+                        .setValue(
 
-                        prefixes[index],
+                            prefixes[
+                                index
+                            ],
 
-                        {
-                            suppressChangeNotifications:
-                                true
-                        }
-                    );
+                            {
+                                suppressChangeNotifications:
+                                    true
+                            }
+                        );
                 }
 
 
 
-                /* ==========================================
-                   DEBOUNCE INPUT
-                   ========================================== */
-
                 let debounceTimer;
 
 
-                mfObj.element.addEventListener(
-                    "input",
-                    () => {
 
-                        clearTimeout(
-                            debounceTimer
-                        );
+                mfObj.element
+                    .addEventListener(
+                        "input",
+                        () => {
 
-
-                        debounceTimer =
-                            setTimeout(
-                                () => {
-
-                                    evaluateStudent();
-
-                                    updateTeacherBox();
-
-                                },
-                                400
+                            clearTimeout(
+                                debounceTimer
                             );
-                    }
-                );
+
+
+                            debounceTimer =
+                                setTimeout(
+                                    () => {
+
+                                        evaluateStudent();
+
+                                        updateTeacherBox();
+
+                                    },
+                                    400
+                                );
+                        }
+                    );
 
             }
         );
 
 
-
-        /* ==================================================
-           INITIAL EVALUATION
-           ================================================== */
 
         if (
             !isLocked
@@ -2455,9 +2665,9 @@ Promise.all([
 
 
 
-        /* ==================================================
-           POST-SUBMISSION MODE
-           ================================================== */
+        /* =================================================
+           POST-SUBMISSION
+           ================================================= */
 
         if (
             isLocked
@@ -2480,9 +2690,6 @@ Promise.all([
                 [];
 
 
-            /* ----------------------------------------------
-               READ STORED GRADES / ERRORS
-               ---------------------------------------------- */
 
             try {
 
@@ -2511,6 +2718,7 @@ Promise.all([
                     finalErrors =
                         parsedAns2[1] ||
                         [];
+
                 }
 
                 else {
@@ -2520,19 +2728,9 @@ Promise.all([
                 }
 
             }
-            catch (e) {
-
-                console.warn(
-                    "Could not read final grading data:",
-                    e
-                );
-            }
+            catch (e) {}
 
 
-
-            /* ----------------------------------------------
-               LOCK FIELDS AND DISPLAY FEEDBACK
-               ---------------------------------------------- */
 
             mfs.forEach(
                 (mfObj, index) => {
@@ -2629,6 +2827,7 @@ Promise.all([
 
                             markIcon.innerHTML =
                                 svgCheck;
+
                         }
 
                         else if (
@@ -2641,6 +2840,7 @@ Promise.all([
 
                             markIcon.innerHTML =
                                 svgAdjust;
+
                         }
 
                         else {
@@ -2651,15 +2851,12 @@ Promise.all([
 
 
 
-                        mfObj.row.appendChild(
-                            markIcon
-                        );
+                        mfObj.row
+                            .appendChild(
+                                markIcon
+                            );
 
 
-
-                        /* ----------------------------------
-                           ERROR MESSAGE
-                           ---------------------------------- */
 
                         if (
 
@@ -2690,10 +2887,6 @@ Promise.all([
                             `;
 
 
-                            /*
-                             innerHTML is intentional because
-                             errors may contain <br>.
-                            */
                             errorDiv.innerHTML =
                                 errorText;
 
@@ -2717,7 +2910,7 @@ Promise.all([
     error => {
 
         console.error(
-            "STACK iframe initialization failed:",
+            "STACK initialization failed:",
             error
         );
     }
@@ -2725,18 +2918,19 @@ Promise.all([
 
 
 
-/* ==========================================================
-   TEACHER DEBUG / COPY-PASTE BOX
-   ========================================================== */
+/* =========================================================
+   TEACHER DEBUG BOX
+   ========================================================= */
 
 function updateTeacherBox() {
 
     try {
 
         const teacherBox =
-            window.parent.document.getElementById(
-                "teacher-box"
-            );
+            window.parent.document
+                .getElementById(
+                    "teacher-box"
+                );
 
 
         if (
@@ -2756,11 +2950,6 @@ function updateTeacherBox() {
             );
 
 
-        /*
-         JSON.stringify automatically produces
-         the double backslashes required inside
-         the pasted Maxima strings.
-        */
         const maximaArray =
             JSON.stringify(
                 currentAnswers
@@ -2794,20 +2983,14 @@ function updateTeacherBox() {
         }
 
     }
-    catch (e) {
-
-        /*
-         Parent access may be restricted in
-         some Moodle iframe configurations.
-        */
-    }
+    catch (e) {}
 }
 
 
 
-/* ==========================================================
-   AUTO-RESIZE STACK IFRAME
-   ========================================================== */
+/* =========================================================
+   AUTO RESIZE
+   ========================================================= */
 
 function autoResize() {
 
@@ -2823,19 +3006,21 @@ function autoResize() {
 
 
         const parentIframe =
-            window.parent.document.getElementById(
-                FRAME_ID
-            );
+            window.parent.document
+                .getElementById(
+                    FRAME_ID
+                );
 
 
         const parentHolder =
-            window.parent.document.getElementById(
+            window.parent.document
+                .getElementById(
 
-                FRAME_ID.replace(
-                    "stack-iframe",
-                    "stack-iframe-holder"
-                )
-            );
+                    FRAME_ID.replace(
+                        "stack-iframe",
+                        "stack-iframe-holder"
+                    )
+                );
 
 
         if (
@@ -2846,7 +3031,8 @@ function autoResize() {
             const newHeight =
 
                 (
-                    document.body.scrollHeight +
+                    document.body
+                        .scrollHeight +
                     20
                 )
 
@@ -2870,6 +3056,7 @@ function autoResize() {
 
 
 autoResize();
+
 
 
 const resizeObserver =
