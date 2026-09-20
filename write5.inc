@@ -28,35 +28,18 @@ math-field::part(menu-toggle) {
 
 [[/style]]
 
-
 <div style="display:none;">
-
     <div id="data-tas">{#js_tas#}</div>
-
     <div id="data-prefixes">{#js_prefixes#}</div>
-
     <div id="data-titles">{#js_titles#}</div>
-
     <div id="data-tex">{#js_tex#}</div>
-
     <div id="data-partial">{#js_partial_credit#}</div>
-
     <div id="data-errors">{#js_error_dict#}</div>
-
     <div id="data-palette-title">{#js_title#}</div>
-
     <div id="data-debug">{#debug_display#}</div>
-
 </div>
 
-
-<div
-    style="
-        font-family:sans-serif;
-        padding:10px;
-        box-sizing:border-box;
-    "
->
+<div style="font-family:sans-serif; padding:10px; box-sizing:border-box;">
 
     <div
         id="button-palette"
@@ -71,7 +54,6 @@ math-field::part(menu-toggle) {
             box-shadow:0 4px 6px rgba(0,0,0,0.1);
         "
     >
-
         <div
             id="palette-title"
             dir="rtl"
@@ -95,11 +77,8 @@ math-field::part(menu-toggle) {
                 gap:8px;
                 padding:10px;
             "
-        >
-        </div>
-
+        ></div>
     </div>
-
 
     <div
         id="mathfields-container"
@@ -108,21 +87,17 @@ math-field::part(menu-toggle) {
             flex-direction:column;
             gap:15px;
         "
-    >
-    </div>
+    ></div>
 
 </div>
 
-
 [[script type="module"]]
-
 
 /* =========================================================
    HIDE MATHLIVE ICONS
    ========================================================= */
 
-const hideIconsStyle =
-    document.createElement("style");
+const hideIconsStyle = document.createElement("style");
 
 hideIconsStyle.textContent = `
     math-field::part(virtual-keyboard-toggle),
@@ -131,19 +106,14 @@ hideIconsStyle.textContent = `
     }
 `;
 
-document.head.appendChild(
-    hideIconsStyle
-);
-
+document.head.appendChild(hideIconsStyle);
 
 
 /* =========================================================
    STACK API
    ========================================================= */
 
-import {stack_js}
-from '[[cors src="stackjsiframe.js"/]]';
-
+import {stack_js} from '[[cors src="stackjsiframe.js"/]]';
 
 
 /* =========================================================
@@ -152,24 +122,17 @@ from '[[cors src="stackjsiframe.js"/]]';
 
 function getStackData(id) {
 
-    const el =
-        document.getElementById(id);
+    const el = document.getElementById(id);
 
     if (!el) {
         return null;
     }
 
-    let txt =
-        el.innerText ||
-        el.textContent ||
-        "";
+    let txt = el.innerText || el.textContent || "";
 
-    txt =
-        txt.trim();
+    txt = txt.trim();
 
-    if (
-        txt.includes("{#")
-    ) {
+    if (txt.includes("{#")) {
         return null;
     }
 
@@ -177,52 +140,31 @@ function getStackData(id) {
 }
 
 
-
-function parseStackJSON(
-    id,
-    fallback
-) {
+function parseStackJSON(id, fallback) {
 
     try {
 
-        const raw =
-            getStackData(id);
+        const raw = getStackData(id);
 
         if (!raw) {
             return fallback;
         }
 
+        let parsed = JSON.parse(raw);
 
-        let parsed =
-            JSON.parse(raw);
-
-
-        if (
-            typeof parsed ===
-            "string"
-        ) {
+        if (typeof parsed === "string") {
 
             try {
-
-                parsed =
-                    JSON.parse(parsed);
-
+                parsed = JSON.parse(parsed);
             }
             catch (e) {
-
                 return [parsed];
             }
         }
 
-
-        if (
-            !Array.isArray(parsed)
-        ) {
-
-            parsed =
-                [parsed];
+        if (!Array.isArray(parsed)) {
+            parsed = [parsed];
         }
-
 
         return parsed;
 
@@ -240,19 +182,13 @@ function parseStackJSON(
 }
 
 
+function parseStackString(id, fallback = "") {
 
-function parseStackString(
-    id,
-    fallback = ""
-) {
-
-    let raw =
-        getStackData(id);
+    let raw = getStackData(id);
 
     if (!raw) {
         return fallback;
     }
-
 
     try {
 
@@ -260,13 +196,11 @@ function parseStackString(
             raw.startsWith('"') &&
             raw.endsWith('"')
         ) {
-
             return JSON.parse(raw);
         }
 
     }
     catch (e) {}
-
 
     return raw.replace(
         /^["']|["']$/g,
@@ -275,24 +209,15 @@ function parseStackString(
 }
 
 
-
-function renderMathInElementSafe(
-    element
-) {
+function renderMathInElementSafe(element) {
 
     try {
 
         if (
             window.MathLive &&
-            typeof window.MathLive
-                .renderMathInElement ===
-                "function"
+            typeof window.MathLive.renderMathInElement === "function"
         ) {
-
-            window.MathLive
-                .renderMathInElement(
-                    element
-                );
+            window.MathLive.renderMathInElement(element);
         }
 
     }
@@ -300,90 +225,66 @@ function renderMathInElementSafe(
 }
 
 
-
 /* =========================================================
    READ STACK VARIABLES
    ========================================================= */
 
-let tas =
-    parseStackJSON(
-        "data-tas",
-        []
-    );
+let tas = parseStackJSON(
+    "data-tas",
+    []
+);
 
+let prefixes = parseStackJSON(
+    "data-prefixes",
+    []
+);
 
-let prefixes =
-    parseStackJSON(
-        "data-prefixes",
-        []
-    );
+let titles = parseStackJSON(
+    "data-titles",
+    []
+);
 
+let texs = parseStackJSON(
+    "data-tex",
+    []
+);
 
-let titles =
-    parseStackJSON(
-        "data-titles",
-        []
-    );
+let errorMessages = parseStackJSON(
+    "data-errors",
+    []
+);
 
-
-let texs =
-    parseStackJSON(
-        "data-tex",
-        []
-    );
-
-
-let errorMessages =
-    parseStackJSON(
-        "data-errors",
-        []
-    );
-
-
-let partialCredit =
-    0.5;
-
+let partialCredit = 0.5;
 
 try {
 
-    const pc =
-        parseFloat(
-            getStackData(
-                "data-partial"
-            )
-        );
-
+    const pc = parseFloat(
+        getStackData("data-partial")
+    );
 
     if (!isNaN(pc)) {
-
-        partialCredit =
-            pc;
+        partialCredit = pc;
     }
 
 }
 catch (e) {}
 
 
-
 /* =========================================================
    PALETTE TITLE
    ========================================================= */
 
-const paletteTitle =
-    parseStackString(
-        "data-palette-title",
-        ""
-    );
-
+const paletteTitle = parseStackString(
+    "data-palette-title",
+    ""
+);
 
 if (paletteTitle) {
 
     document.getElementById(
         "palette-title"
-    ).innerText =
-        paletteTitle;
+    ).innerText = paletteTitle;
 }
-
 
 
 /* =========================================================
@@ -394,113 +295,88 @@ const REACTION_ARROW_RE =
     /\\xrightarrow(?:\[[^\]]*\])?\{[^{}]*\}|\\rightleftharpoons|\\longrightarrow(?:\{\})?|\\rightarrow(?:\{\})?|\\Rightarrow(?:\{\})?|=/;
 
 
-
 /* =========================================================
    BASIC LATEX CLEANING
+
+   Empty scripts such as _{} and ^{} are invisible and
+   therefore must not affect grading.
    ========================================================= */
 
 function cleanLatex(s) {
 
-    s =
-        String(
-            s ?? ""
-        );
+    s = String(s ?? "");
 
-
-    s =
-        s.replace(
-            /\\textcolor\{[^{}]*\}\{([^{}]*)\}/g,
-            "$1"
-        );
-
+    s = s.replace(
+        /\\textcolor\{[^{}]*\}\{([^{}]*)\}/g,
+        "$1"
+    );
 
     let previous;
 
-
     do {
 
-        previous =
-            s;
+        previous = s;
 
+        s = s.replace(
+            /\\(?:mathbf|mathrm|mathit|mathsf|mathtt)\{([^{}]*)\}/g,
+            "$1"
+        );
 
-        s =
-            s.replace(
-                /\\(?:mathbf|mathrm|mathit|mathsf|mathtt)\{([^{}]*)\}/g,
-                "$1"
-            );
+    } while (s !== previous);
 
-    }
-    while (
-        s !== previous
+    s = s
+        .replace(/\\left/g, "")
+        .replace(/\\right/g, "")
+        .replace(/\\[,;!]/g, "")
+        .replace(/\s+/g, "");
+
+    /*
+     Empty subscript/superscript:
+       H_2^{}  -> H_2
+       H_2_{}  -> H_2
+    */
+    s = s.replace(
+        /[_^]\{\}/g,
+        ""
     );
 
+    /*
+     Remaining harmless empty braces.
+    */
+    s = s.replace(
+        /\{\}/g,
+        ""
+    );
 
-    return s
-
-        .replace(
-            /\\left/g,
-            ""
-        )
-
-        .replace(
-            /\\right/g,
-            ""
-        )
-
-        .replace(
-            /\\[,;!]/g,
-            ""
-        )
-
-        .replace(
-            /\s+/g,
-            ""
-        )
-
-        .replace(
-            /\{\}/g,
-            ""
-        );
+    return s;
 }
 
 
-
 /* =========================================================
-   NORMALIZE DOUBLE SUBSCRIPT / SUPERSCRIPT
+   NORMALIZE SUBSCRIPTS / SUPERSCRIPTS
 
    Examples:
 
    C_3H_8_{(g)}
-          ↓
+        ->
    C_3H_{8(g)}
 
    C_3H_{8(g)}
-          ↓
+        ->
    C_3H_{8(g)}
 
-   C_{3}H_8_{(g)}
-          ↓
-   C_3H_{8(g)}
-
+   _{} and ^{} disappear completely.
    ========================================================= */
 
 function normalizeScripts(s) {
 
-    let result =
-        "";
-
-    let i =
-        0;
+    let result = "";
+    let i = 0;
 
 
+    function readScriptArgument(start) {
 
-    function readScriptArgument(
-        start
-    ) {
-
-        if (
-            start >= s.length
-        ) {
+        if (start >= s.length) {
 
             return {
                 content: "",
@@ -509,245 +385,150 @@ function normalizeScripts(s) {
         }
 
 
+        /* Braced argument: _{...} or ^{...} */
+        if (s[start] === "{") {
 
-        /* ---------------------------------------------
-           BRACED ARGUMENT
-           --------------------------------------------- */
-
-        if (
-            s[start] === "{"
-        ) {
-
-            let depth =
-                1;
-
-            let j =
-                start + 1;
-
-            let content =
-                "";
-
+            let depth = 1;
+            let j = start + 1;
+            let content = "";
 
             while (
                 j < s.length &&
                 depth > 0
             ) {
 
-                if (
-                    s[j] === "{"
-                ) {
+                if (s[j] === "{") {
 
                     depth++;
 
-                    if (
-                        depth > 1
-                    ) {
-
-                        content +=
-                            s[j];
+                    if (depth > 1) {
+                        content += s[j];
                     }
 
                 }
-
-                else if (
-                    s[j] === "}"
-                ) {
+                else if (s[j] === "}") {
 
                     depth--;
 
-                    if (
-                        depth > 0
-                    ) {
-
-                        content +=
-                            s[j];
+                    if (depth > 0) {
+                        content += s[j];
                     }
 
                 }
-
                 else {
 
-                    content +=
-                        s[j];
+                    content += s[j];
                 }
-
 
                 j++;
             }
 
-
             return {
-
-                content:
-                    content,
-
-                end:
-                    j
+                content: content,
+                end: j
             };
         }
 
 
+        /* LaTeX command: _\alpha, ^\beta, etc. */
+        if (s[start] === "\\") {
 
-        /* ---------------------------------------------
-           LATEX COMMAND
-           --------------------------------------------- */
-
-        if (
-            s[start] === "\\"
-        ) {
-
-            let j =
-                start + 1;
-
+            let j = start + 1;
 
             while (
                 j < s.length &&
-                /[A-Za-z]/.test(
-                    s[j]
-                )
+                /[A-Za-z]/.test(s[j])
             ) {
-
                 j++;
             }
 
-
             return {
-
-                content:
-                    s.slice(
-                        start,
-                        j
-                    ),
-
-                end:
-                    j
+                content: s.slice(start, j),
+                end: j
             };
         }
 
 
-
-        /* ---------------------------------------------
-           SINGLE CHARACTER
-           --------------------------------------------- */
-
+        /* Single unbraced character: _2, ^+, etc. */
         return {
-
-            content:
-                s[start],
-
-            end:
-                start + 1
+            content: s[start],
+            end: start + 1
         };
     }
 
 
+    while (i < s.length) {
 
-    while (
-        i < s.length
-    ) {
-
-        const ch =
-            s[i];
-
+        const ch = s[i];
 
         if (
             ch !== "_" &&
             ch !== "^"
         ) {
 
-            result +=
-                ch;
-
+            result += ch;
             i++;
 
             continue;
         }
 
 
-
-        const operator =
-            ch;
-
+        const operator = ch;
 
         i++;
 
 
-        let parsed =
-            readScriptArgument(
-                i
-            );
+        let parsed = readScriptArgument(i);
 
+        let combined = parsed.content;
 
-        let combined =
-            parsed.content;
-
-
-        i =
-            parsed.end;
-
+        i = parsed.end;
 
 
         /*
-         Merge consecutive scripts of the SAME kind.
+         Merge consecutive scripts of the SAME type.
 
          H_8_{(g)}
-
-         becomes:
-
+             ->
          H_{8(g)}
         */
-
         while (
-
             i < s.length &&
-
             s[i] === operator
-
         ) {
 
             i++;
 
+            parsed = readScriptArgument(i);
 
-            parsed =
-                readScriptArgument(
-                    i
-                );
+            combined += parsed.content;
 
-
-            combined +=
-                parsed.content;
-
-
-            i =
-                parsed.end;
+            i = parsed.end;
         }
 
 
+        /*
+         Empty script has no visible meaning.
+        */
+        if (combined === "") {
+            continue;
+        }
+
 
         /*
-         One-character script:
+         One-character script stays compact:
+           _3
 
-         _3  stays _3
-
-         Longer script:
-
-         _8_(g)
-
-         becomes:
-
-         _{8(g)}
+         Longer script becomes:
+           _{8(g)}
         */
-
-        if (
-            combined.length === 1
-        ) {
+        if (combined.length === 1) {
 
             result +=
                 operator +
                 combined;
 
         }
-
         else {
 
             result +=
@@ -758,10 +539,8 @@ function normalizeScripts(s) {
         }
     }
 
-
     return result;
 }
-
 
 
 /* =========================================================
@@ -770,204 +549,109 @@ function normalizeScripts(s) {
 
 function exactSpecies(s) {
 
-    s =
-        cleanLatex(
-            s
-        );
+    s = cleanLatex(s);
 
-
-    s =
-        normalizeScripts(
-            s
-        );
-
+    s = normalizeScripts(s);
 
     return s;
 }
-
 
 
 /* =========================================================
    CORE SPECIES NORMALIZATION
 
-   Used for detecting formatting errors.
+   Used only to identify technical formatting/state errors.
 
-   States and script formatting are ignored,
-   but chemical capitalization is preserved.
-
-   CO != Co
+   Capitalization is preserved:
+      CO != Co
    ========================================================= */
 
 function coreSpecies(s) {
 
-    s =
-        exactSpecies(
-            s
-        );
-
+    s = exactSpecies(s);
 
     /*
-     Remove physical states even if they are
-     contained inside a subscript.
+     Remove physical states wherever they occur
+     inside the normalized expression.
 
-     H_{2(g)}
-        →
-     H_{2}
+     H_{2(g)} -> H_{2}
     */
+    s = s.replace(
+        /\((?:aq|g|l|s)\)/g,
+        ""
+    );
 
-    s =
-        s.replace(
-            /\((?:aq|g|l|s)\)/g,
-            ""
-        );
-
-
-    s =
-        s
-
-        .replace(
-            /\\alpha/g,
-            "α"
-        )
-
-        .replace(
-            /\\beta/g,
-            "β"
-        )
-
-        .replace(
-            /\\gamma/g,
-            "γ"
-        )
-
-        .replace(
-            /\\omega/g,
-            "ω"
-        );
-
+    s = s
+        .replace(/\\alpha/g, "α")
+        .replace(/\\beta/g, "β")
+        .replace(/\\gamma/g, "γ")
+        .replace(/\\omega/g, "ω");
 
     /*
      Remove remaining LaTeX commands.
     */
-
-    s =
-        s.replace(
-            /\\[A-Za-z]+/g,
-            ""
-        );
-
+    s = s.replace(
+        /\\[A-Za-z]+/g,
+        ""
+    );
 
     /*
-     Remove notation formatting,
-     but keep numbers and charges.
+     Ignore script/bracket formatting but preserve
+     numbers, letters and charge signs.
     */
-
-    s =
-        s.replace(
-            /[_^{}()[\]]/g,
-            ""
-        );
-
+    s = s.replace(
+        /[_^{}()[\]]/g,
+        ""
+    );
 
     return s;
 }
 
 
-
 /* =========================================================
-   NORMALIZE ARROW
+   NORMALIZE REACTION ARROW
    ========================================================= */
 
-function normalizeArrow(
-    arrow
-) {
+function normalizeArrow(arrow) {
 
-    const s =
-        cleanLatex(
-            arrow
-        );
-
+    const s = cleanLatex(arrow);
 
     if (
-        s.includes(
-            "\\rightleftharpoons"
-        )
+        s.includes("\\rightleftharpoons")
     ) {
-
         return "<=>";
     }
 
-
     if (
-
-        s.includes(
-            "\\xrightarrow"
-        )
-
-        ||
-
-        s.includes(
-            "\\longrightarrow"
-        )
-
-        ||
-
-        s.includes(
-            "\\rightarrow"
-        )
-
-        ||
-
-        s.includes(
-            "\\Rightarrow"
-        )
-
+        s.includes("\\xrightarrow") ||
+        s.includes("\\longrightarrow") ||
+        s.includes("\\rightarrow") ||
+        s.includes("\\Rightarrow")
     ) {
-
         return "->";
     }
 
-
-    if (
-        s === "="
-    ) {
-
+    if (s === "=") {
         return "=";
     }
-
 
     return s;
 }
 
 
-
 /* =========================================================
-   SPLIT REACTION INTO TERMS
+   SPLIT REACTION SIDE INTO TERMS
    ========================================================= */
 
-function splitTerms(
-    side
-) {
+function splitTerms(side) {
 
-    const terms =
-        [];
+    const terms = [];
 
+    let current = "";
 
-    let current =
-        "";
-
-
-    let braces =
-        0;
-
-
-    let parentheses =
-        0;
-
-
-    let brackets =
-        0;
-
+    let braces = 0;
+    let parentheses = 0;
+    let brackets = 0;
 
 
     for (
@@ -976,186 +660,110 @@ function splitTerms(
         i++
     ) {
 
-        const ch =
-            side[i];
+        const ch = side[i];
 
-
-        if (
-            ch === "{"
-        ) {
-
+        if (ch === "{") {
             braces++;
-
         }
-
-        else if (
-            ch === "}"
-        ) {
-
-            braces =
-                Math.max(
-                    0,
-                    braces - 1
-                );
-
+        else if (ch === "}") {
+            braces = Math.max(
+                0,
+                braces - 1
+            );
         }
-
-        else if (
-            ch === "("
-        ) {
-
+        else if (ch === "(") {
             parentheses++;
-
         }
-
-        else if (
-            ch === ")"
-        ) {
-
-            parentheses =
-                Math.max(
-                    0,
-                    parentheses - 1
-                );
-
+        else if (ch === ")") {
+            parentheses = Math.max(
+                0,
+                parentheses - 1
+            );
         }
-
-        else if (
-            ch === "["
-        ) {
-
+        else if (ch === "[") {
             brackets++;
-
         }
-
-        else if (
-            ch === "]"
-        ) {
-
-            brackets =
-                Math.max(
-                    0,
-                    brackets - 1
-                );
+        else if (ch === "]") {
+            brackets = Math.max(
+                0,
+                brackets - 1
+            );
         }
-
 
 
         if (
-
             ch === "+" &&
-
             braces === 0 &&
-
             parentheses === 0 &&
-
             brackets === 0
-
         ) {
 
-            const before =
-                current.trim();
-
+            const before = current.trim();
 
             /*
-             Protect unbraced ionic charge:
+             Protect an unbraced ionic charge:
              H^+
              Fe^3+
             */
-
             const chargePlus =
-                /\^\d*$/.test(
-                    before
-                );
+                /\^\d*$/.test(before);
 
 
-            if (
-                !chargePlus
-            ) {
+            if (!chargePlus) {
 
-                if (
-                    before !== ""
-                ) {
-
-                    terms.push(
-                        before
-                    );
+                if (before !== "") {
+                    terms.push(before);
                 }
 
-
-                current =
-                    "";
-
+                current = "";
 
                 continue;
             }
         }
 
-
-        current +=
-            ch;
+        current += ch;
     }
 
 
-
     if (
-        current.trim() !==
-        ""
+        current.trim() !== ""
     ) {
-
         terms.push(
             current.trim()
         );
     }
 
-
     return terms;
 }
 
 
-
 /* =========================================================
-   PARSE TERM
+   PARSE ONE TERM
+
+   2C_2H_6  -> coefficient 2
+   C_2H_6   -> coefficient 1
    ========================================================= */
 
-function parseTerm(
-    term
-) {
+function parseTerm(term) {
 
-    let s =
-        exactSpecies(
-            term
+    let s = exactSpecies(term);
+
+    let coefficient = 1;
+
+    let body = s;
+
+    const match = s.match(
+        /^(\d+)(.+)$/
+    );
+
+    if (match) {
+
+        coefficient = Number(
+            match[1]
         );
 
-
-    let coefficient =
-        1;
-
-
-    let body =
-        s;
-
-
-    const match =
-        s.match(
-            /^(\d+)(.+)$/
-        );
-
-
-    if (
-        match
-    ) {
-
-        coefficient =
-            Number(
-                match[1]
-            );
-
-
-        body =
-            match[2];
+        body = match[2];
     }
-
 
     return {
 
@@ -1163,21 +771,16 @@ function parseTerm(
             coefficient,
 
         exact:
-            exactSpecies(
-                body
-            ),
+            exactSpecies(body),
 
         core:
-            coreSpecies(
-                body
-            )
+            coreSpecies(body)
     };
 }
 
 
-
 /* =========================================================
-   SIDE SIGNATURE
+   STANDARD SIDE SIGNATURE
    ========================================================= */
 
 function sideSignature(
@@ -1187,13 +790,10 @@ function sideSignature(
 ) {
 
     return terms
-
         .map(
             term => {
 
-                if (
-                    includeCoefficient
-                ) {
+                if (includeCoefficient) {
 
                     return (
                         term.coefficient +
@@ -1202,31 +802,23 @@ function sideSignature(
                     );
                 }
 
-
                 return term[mode];
             }
         )
-
         .sort()
-
         .join("+");
 }
 
 
-
 /* =========================================================
-   PROCESS CHEMICAL EXPRESSION
+   PROCESS COMPLETE CHEMICAL EXPRESSION
    ========================================================= */
 
-function processChem(
-    latex
-) {
+function processChem(latex) {
 
-    latex =
-        String(
-            latex ?? ""
-        );
-
+    latex = String(
+        latex ?? ""
+    );
 
     const arrowMatch =
         latex.match(
@@ -1234,20 +826,14 @@ function processChem(
         );
 
 
-
-    /* =====================================================
+    /* -----------------------------------------------------
        SINGLE FORMULA
-       ===================================================== */
+       ----------------------------------------------------- */
 
-    if (
-        !arrowMatch
-    ) {
+    if (!arrowMatch) {
 
         const term =
-            parseTerm(
-                latex
-            );
-
+            parseTerm(latex);
 
         return {
 
@@ -1276,14 +862,12 @@ function processChem(
     }
 
 
-
-    /* =====================================================
+    /* -----------------------------------------------------
        COMPLETE REACTION
-       ===================================================== */
+       ----------------------------------------------------- */
 
     const arrowText =
         arrowMatch[0];
-
 
     const leftText =
         latex.slice(
@@ -1291,29 +875,19 @@ function processChem(
             arrowMatch.index
         );
 
-
     const rightText =
         latex.slice(
             arrowMatch.index +
             arrowText.length
         );
 
-
     const left =
-        splitTerms(
-            leftText
-        ).map(
-            parseTerm
-        );
-
+        splitTerms(leftText)
+            .map(parseTerm);
 
     const right =
-        splitTerms(
-            rightText
-        ).map(
-            parseTerm
-        );
-
+        splitTerms(rightText)
+            .map(parseTerm);
 
     const arrow =
         normalizeArrow(
@@ -1430,7 +1004,6 @@ function processChem(
 }
 
 
-
 /* =========================================================
    STOICHIOMETRIC MAP
    ========================================================= */
@@ -1454,18 +1027,13 @@ function makeStoichiometricMap(
             "|" +
             term[mode];
 
-
         map.set(
-
             key,
-
             (
                 map.get(key) ||
                 0
             )
-
             +
-
             term.coefficient
         );
     }
@@ -1479,7 +1047,6 @@ function makeStoichiometricMap(
             )
     );
 
-
     reaction.right.forEach(
         term =>
             add(
@@ -1488,51 +1055,50 @@ function makeStoichiometricMap(
             )
     );
 
-
     return map;
 }
 
 
-
 /* =========================================================
-   TEST WHETHER COEFFICIENTS ARE PROPORTIONAL
+   COEFFICIENT RELATION TO TEACHER ANSWER
 
-   Example:
+   Returns:
 
-   Teacher:
-   2C2H6 + 7O2 -> 4CO2 + 6H2O
+   "exact"
+      Student uses exactly the teacher's simplest
+      integer coefficients.
 
-   Student:
-   4C2H6 + 14O2 -> 8CO2 + 12H2O
+   "proportional"
+      Student is balanced in the same ratio but has
+      multiplied all coefficients by the same factor.
 
-   Result:
-   correct
+      Example:
+        teacher: 2,7,4,6
+        student: 4,14,8,12
+
+   "different"
+      Coefficients are not proportional, species differ,
+      or reaction arrow differs.
    ========================================================= */
 
-function coefficientsAreProportional(
+function coefficientRelation(
     student,
     teacher,
     mode
 ) {
 
     if (
-
         !student.isReaction ||
-
         !teacher.isReaction
-
     ) {
-
-        return false;
+        return "different";
     }
-
 
     if (
         student.arrow !==
         teacher.arrow
     ) {
-
-        return false;
+        return "different";
     }
 
 
@@ -1541,7 +1107,6 @@ function coefficientsAreProportional(
             student,
             mode
         );
-
 
     const tm =
         makeStoichiometricMap(
@@ -1554,18 +1119,18 @@ function coefficientsAreProportional(
         sm.size !==
         tm.size
     ) {
-
-        return false;
+        return "different";
     }
 
 
-    let baseStudent =
+    let firstStudent =
         null;
 
-
-    let baseTeacher =
+    let firstTeacher =
         null;
 
+    let coefficientsExactlySame =
+        true;
 
 
     for (
@@ -1576,11 +1141,8 @@ function coefficientsAreProportional(
         of tm
     ) {
 
-        if (
-            !sm.has(key)
-        ) {
-
-            return false;
+        if (!sm.has(key)) {
+            return "different";
         }
 
 
@@ -1589,42 +1151,59 @@ function coefficientsAreProportional(
 
 
         if (
-            baseStudent ===
+            studentCoefficient !==
+            teacherCoefficient
+        ) {
+            coefficientsExactlySame =
+                false;
+        }
+
+
+        if (
+            firstStudent ===
             null
         ) {
 
-            baseStudent =
+            firstStudent =
                 studentCoefficient;
 
-
-            baseTeacher =
+            firstTeacher =
                 teacherCoefficient;
 
         }
-
         else {
 
-            if (
+            /*
+             Compare ratios by cross multiplication.
 
+             s/t = s0/t0
+             iff
+             s*t0 = t*s0
+            */
+            if (
                 studentCoefficient *
-                baseTeacher
+                firstTeacher
 
                 !==
 
                 teacherCoefficient *
-                baseStudent
-
+                firstStudent
             ) {
-
-                return false;
+                return "different";
             }
         }
     }
 
 
-    return true;
-}
+    if (
+        coefficientsExactlySame
+    ) {
+        return "exact";
+    }
 
+
+    return "proportional";
+}
 
 
 /* =========================================================
@@ -1640,9 +1219,8 @@ const teacherDataArray =
     );
 
 
-
 /* =========================================================
-   UI
+   UI REFERENCES
    ========================================================= */
 
 const btnContainer =
@@ -1650,20 +1228,15 @@ const btnContainer =
         "preset-buttons-container"
     );
 
-
 const container =
     document.getElementById(
         "mathfields-container"
     );
 
-
-let mfs =
-    [];
-
+let mfs = [];
 
 let activeMathField =
     null;
-
 
 
 /* =========================================================
@@ -1697,6 +1270,9 @@ tas.forEach(
         `;
 
 
+        /* -------------------------------------------------
+           TITLE
+           ------------------------------------------------- */
 
         if (
             titles[index]
@@ -1748,6 +1324,9 @@ tas.forEach(
         }
 
 
+        /* -------------------------------------------------
+           MATH-FIELD ROW
+           ------------------------------------------------- */
 
         const mfRow =
             document.createElement(
@@ -1760,7 +1339,6 @@ tas.forEach(
             align-items:center;
             width:100%;
         `;
-
 
 
         const mf =
@@ -1788,7 +1366,6 @@ tas.forEach(
         `;
 
 
-
         mf.addEventListener(
             "focusin",
             () => {
@@ -1796,16 +1373,13 @@ tas.forEach(
                 activeMathField =
                     mf;
 
-
                 mf.style.boxShadow =
                     "0 0 0 4px rgba(147,197,253,0.4)";
-
 
                 const palette =
                     document.getElementById(
                         "button-palette"
                     );
-
 
                 if (
                     palette &&
@@ -1822,7 +1396,6 @@ tas.forEach(
         );
 
 
-
         mf.addEventListener(
             "focusout",
             () => {
@@ -1831,7 +1404,6 @@ tas.forEach(
                     "0 2px 4px rgba(0,0,0,0.05)";
             }
         );
-
 
 
         mfRow.appendChild(
@@ -1857,20 +1429,16 @@ tas.forEach(
             row:
                 mfRow
         });
-
     }
 );
-
 
 
 if (
     mfs.length > 0
 ) {
-
     activeMathField =
         mfs[0].element;
 }
-
 
 
 /* =========================================================
@@ -1884,9 +1452,7 @@ for (
 ) {
 
     let displayTex;
-
     let insertTex;
-
 
 
     if (
@@ -1898,23 +1464,19 @@ for (
         displayTex =
             texs[i][0];
 
-
         insertTex =
             texs[i][1] ||
             texs[i][0];
 
     }
-
     else {
 
         displayTex =
             texs[i];
 
-
         insertTex =
             texs[i];
     }
-
 
 
     const btn =
@@ -1940,7 +1502,6 @@ for (
     `;
 
 
-
     btn.addEventListener(
         "mouseenter",
         () => {
@@ -1948,12 +1509,10 @@ for (
             btn.style.backgroundColor =
                 "#e2e6ea";
 
-
             btn.style.boxShadow =
                 "0 2px 4px rgba(0,0,0,0.1)";
         }
     );
-
 
 
     btn.addEventListener(
@@ -1963,12 +1522,10 @@ for (
             btn.style.backgroundColor =
                 "#f8f9fa";
 
-
             btn.style.boxShadow =
                 "none";
         }
     );
-
 
 
     const mathHtml = `
@@ -1984,7 +1541,6 @@ for (
     `;
 
 
-
     const overlayHtml = `
         <div
             style="
@@ -1995,10 +1551,8 @@ for (
                 bottom:0;
                 z-index:100;
             "
-        >
-        </div>
+        ></div>
     `;
-
 
 
     btn.innerHTML =
@@ -2009,7 +1563,6 @@ for (
     renderMathInElementSafe(
         btn
     );
-
 
 
     btn.addEventListener(
@@ -2024,10 +1577,8 @@ for (
             if (
                 !activeMathField
             ) {
-
                 return;
             }
-
 
 
             if (
@@ -2040,7 +1591,6 @@ for (
                     );
 
             }
-
             else if (
                 insertTex === "_"
             ) {
@@ -2051,7 +1601,6 @@ for (
                     );
 
             }
-
             else {
 
                 activeMathField.insert(
@@ -2071,9 +1620,8 @@ for (
 }
 
 
-
 /* =========================================================
-   STACK INPUTS
+   STACK INPUT ACCESS
    ========================================================= */
 
 Promise.all([
@@ -2119,6 +1667,9 @@ Promise.all([
         }
 
 
+        /* =================================================
+           LOCK STATE
+           ================================================= */
 
         const isLocked =
 
@@ -2135,7 +1686,6 @@ Promise.all([
             );
 
 
-
         /* =================================================
            STUDENT EVALUATION
            ================================================= */
@@ -2145,7 +1695,6 @@ Promise.all([
             if (
                 isLocked
             ) {
-
                 return;
             }
 
@@ -2153,14 +1702,11 @@ Promise.all([
             let currentAnswers =
                 [];
 
-
             let currentGrades =
                 [];
 
-
             let currentErrors =
                 [];
-
 
 
             mfs.forEach(
@@ -2174,11 +1720,18 @@ Promise.all([
                             ) || "";
 
 
+                    /*
+                     JSON.stringify() handles the
+                     backslash escaping.
+                    */
                     currentAnswers.push(
                         rawLatex
                     );
 
 
+                    /* -------------------------------------
+                       EMPTY ANSWER
+                       ------------------------------------- */
 
                     if (
                         rawLatex.trim() ===
@@ -2189,15 +1742,12 @@ Promise.all([
                             0
                         );
 
-
                         currentErrors.push(
                             ""
                         );
 
-
                         return;
                     }
-
 
 
                     const studentData =
@@ -2228,26 +1778,61 @@ Promise.all([
                         false;
 
 
+                    let coefficientStatusExact =
+                        "different";
 
-                    /* =====================================
-                       EXACT ANSWER
-                       ===================================== */
+
+                    let coefficientStatusCore =
+                        "different";
+
 
                     if (
-
-                        studentData.exact ===
-                        tData.exact
-
+                        studentData.isReaction &&
+                        tData.isReaction
                     ) {
 
-                        grade =
-                            1;
+                        coefficientStatusExact =
+                            coefficientRelation(
+                                studentData,
+                                tData,
+                                "exact"
+                            );
+
+
+                        coefficientStatusCore =
+                            coefficientRelation(
+                                studentData,
+                                tData,
+                                "core"
+                            );
                     }
 
 
+                    /* =====================================
+                       1. COMPLETELY CORRECT
+
+                       Must use teacher's simplest integer
+                       coefficients.
+                       ===================================== */
+
+                    if (
+                        studentData.exact ===
+                        tData.exact
+                    ) {
+
+                        grade = 1;
+                    }
+
 
                     /* =====================================
-                       PROPORTIONAL BALANCED REACTION
+                       2. BALANCED, BUT NOT IN SIMPLEST
+                          INTEGER RATIO
+
+                       Teacher:
+                         2,7,4,6
+
+                       Student:
+                         4,14,8,12
                        ===================================== */
 
                     else if (
@@ -2256,23 +1841,29 @@ Promise.all([
 
                         tData.isReaction &&
 
-                        coefficientsAreProportional(
-                            studentData,
-                            tData,
-                            "exact"
-                        )
+                        coefficientStatusExact ===
+                            "proportional"
 
                     ) {
 
                         grade =
-                            1;
+                            partialCredit;
+
+
+                        currentInputErrors.push(
+
+                            errorMessages[3]
+
+                            ||
+
+                            "التفاعل موزون، لكن يجب كتابة المعاملات بأبسط نسبة من الأعداد الصحيحة"
+                        );
                     }
 
 
-
                     /* =====================================
-                       CORRECT SPECIES
-                       WRONG COEFFICIENTS
+                       3. CORRECT SPECIES / STATES /
+                          FORMATTING, BUT NOT BALANCED
                        ===================================== */
 
                     else if (
@@ -2282,7 +1873,7 @@ Promise.all([
                         tData.isReaction &&
 
                         studentData.speciesExact ===
-                        tData.speciesExact
+                            tData.speciesExact
 
                     ) {
 
@@ -2295,9 +1886,9 @@ Promise.all([
                     }
 
 
-
                     /* =====================================
-                       BALANCED BUT FORMATTING / STATES WRONG
+                       4. SIMPLEST COEFFICIENTS CORRECT,
+                          BUT STATE / SCRIPT FORMAT WRONG
                        ===================================== */
 
                     else if (
@@ -2306,11 +1897,8 @@ Promise.all([
 
                         tData.isReaction &&
 
-                        coefficientsAreProportional(
-                            studentData,
-                            tData,
-                            "core"
-                        )
+                        coefficientStatusCore ===
+                            "exact"
 
                     ) {
 
@@ -2323,10 +1911,45 @@ Promise.all([
                     }
 
 
+                    /* =====================================
+                       5. BALANCED PROPORTIONALLY BUT NOT
+                          SIMPLEST, AND FORMAT/STATE IS
+                          ALSO WRONG
+                       ===================================== */
+
+                    else if (
+
+                        studentData.isReaction &&
+
+                        tData.isReaction &&
+
+                        coefficientStatusCore ===
+                            "proportional"
+
+                    ) {
+
+                        isBadFormat =
+                            true;
+
+
+                        grade =
+                            0;
+
+
+                        currentInputErrors.push(
+
+                            errorMessages[3]
+
+                            ||
+
+                            "التفاعل موزون، لكن يجب كتابة المعاملات بأبسط نسبة من الأعداد الصحيحة"
+                        );
+                    }
+
 
                     /* =====================================
-                       SAME BASIC SPECIES BUT BOTH
-                       COEFFICIENTS AND FORMAT WRONG
+                       6. SAME BASIC SPECIES BUT BOTH
+                          BALANCE AND FORMAT ARE WRONG
                        ===================================== */
 
                     else if (
@@ -2336,7 +1959,7 @@ Promise.all([
                         tData.isReaction &&
 
                         studentData.speciesCore ===
-                        tData.speciesCore
+                            tData.speciesCore
 
                     ) {
 
@@ -2353,10 +1976,9 @@ Promise.all([
                     }
 
 
-
                     /* =====================================
-                       SINGLE COMPOUND:
-                       CORRECT CORE, BAD FORMAT
+                       7. SINGLE FORMULA:
+                          CORRECT CHEMISTRY, BAD FORMAT
                        ===================================== */
 
                     else if (
@@ -2366,7 +1988,7 @@ Promise.all([
                         !tData.isReaction &&
 
                         studentData.speciesCore ===
-                        tData.speciesCore
+                            tData.speciesCore
 
                     ) {
 
@@ -2379,9 +2001,8 @@ Promise.all([
                     }
 
 
-
                     /* =====================================
-                       WRONG CHEMISTRY
+                       8. WRONG CHEMISTRY
                        ===================================== */
 
                     else {
@@ -2397,6 +2018,9 @@ Promise.all([
                     }
 
 
+                    /* -------------------------------------
+                       UNBALANCED ERROR
+                       ------------------------------------- */
 
                     if (
                         isUnbalanced
@@ -2413,6 +2037,9 @@ Promise.all([
                     }
 
 
+                    /* -------------------------------------
+                       FORMAT / STATE ERROR
+                       ------------------------------------- */
 
                     if (
                         isBadFormat
@@ -2429,7 +2056,6 @@ Promise.all([
                     }
 
 
-
                     currentGrades.push(
                         grade
                     );
@@ -2442,11 +2068,13 @@ Promise.all([
                                 "<br>"
                             )
                     );
-
                 }
             );
 
 
+            /* =============================================
+               WRITE RESULTS TO STACK
+               ============================================= */
 
             const newAnsStr =
                 JSON.stringify(
@@ -2464,7 +2092,6 @@ Promise.all([
                 ]);
 
 
-
             if (
                 hiddenInput1.value !==
                 newAnsStr
@@ -2480,12 +2107,12 @@ Promise.all([
                         new Event(
                             "change",
                             {
-                                bubbles:true
+                                bubbles:
+                                    true
                             }
                         )
                     );
             }
-
 
 
             if (
@@ -2503,13 +2130,13 @@ Promise.all([
                         new Event(
                             "change",
                             {
-                                bubbles:true
+                                bubbles:
+                                    true
                             }
                         )
                     );
             }
         }
-
 
 
         /* =================================================
@@ -2560,13 +2187,18 @@ Promise.all([
                 }
 
             }
-            catch (e) {}
+            catch (e) {
+
+                console.warn(
+                    "Could not restore saved answers:",
+                    e
+                );
+            }
         }
 
 
-
         /* =================================================
-           LOAD PREFIXES / SAVED VALUES
+           LOAD SAVED VALUES / PREFIXES
            ================================================= */
 
         mfs.forEach(
@@ -2600,7 +2232,6 @@ Promise.all([
                         );
 
                 }
-
                 else if (
                     prefixes[index]
                 ) {
@@ -2620,9 +2251,7 @@ Promise.all([
                 }
 
 
-
                 let debounceTimer;
-
 
 
                 mfObj.element
@@ -2648,11 +2277,13 @@ Promise.all([
                                 );
                         }
                     );
-
             }
         );
 
 
+        /* =================================================
+           INITIAL EVALUATION
+           ================================================= */
 
         if (
             !isLocked
@@ -2662,7 +2293,6 @@ Promise.all([
 
             updateTeacherBox();
         }
-
 
 
         /* =================================================
@@ -2688,7 +2318,6 @@ Promise.all([
 
             let finalErrors =
                 [];
-
 
 
             try {
@@ -2720,7 +2349,6 @@ Promise.all([
                         [];
 
                 }
-
                 else {
 
                     finalGrades =
@@ -2729,7 +2357,6 @@ Promise.all([
 
             }
             catch (e) {}
-
 
 
             mfs.forEach(
@@ -2754,7 +2381,6 @@ Promise.all([
                         ];
 
 
-
                     if (
                         !isNaN(
                             grade
@@ -2775,7 +2401,6 @@ Promise.all([
                         `;
 
 
-
                         const svgCheck = `
                             <svg
                                 viewBox="0 0 512 512"
@@ -2788,7 +2413,6 @@ Promise.all([
                                 />
                             </svg>
                         `;
-
 
 
                         const svgAdjust = `
@@ -2805,7 +2429,6 @@ Promise.all([
                         `;
 
 
-
                         const svgTimes = `
                             <svg
                                 viewBox="0 0 320 512"
@@ -2820,7 +2443,6 @@ Promise.all([
                         `;
 
 
-
                         if (
                             grade === 1
                         ) {
@@ -2829,7 +2451,6 @@ Promise.all([
                                 svgCheck;
 
                         }
-
                         else if (
 
                             grade > 0 &&
@@ -2842,7 +2463,6 @@ Promise.all([
                                 svgAdjust;
 
                         }
-
                         else {
 
                             markIcon.innerHTML =
@@ -2850,12 +2470,10 @@ Promise.all([
                         }
 
 
-
                         mfObj.row
                             .appendChild(
                                 markIcon
                             );
-
 
 
                         if (
@@ -2898,11 +2516,9 @@ Promise.all([
                                 );
                         }
                     }
-
                 }
             );
         }
-
     }
 )
 
@@ -2915,7 +2531,6 @@ Promise.all([
         );
     }
 );
-
 
 
 /* =========================================================
@@ -2936,7 +2551,6 @@ function updateTeacherBox() {
         if (
             !teacherBox
         ) {
-
             return;
         }
 
@@ -2987,7 +2601,6 @@ function updateTeacherBox() {
 }
 
 
-
 /* =========================================================
    AUTO RESIZE
    ========================================================= */
@@ -3000,7 +2613,6 @@ function autoResize() {
             typeof FRAME_ID ===
             "undefined"
         ) {
-
             return;
         }
 
@@ -3054,9 +2666,7 @@ function autoResize() {
 }
 
 
-
 autoResize();
-
 
 
 const resizeObserver =
