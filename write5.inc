@@ -368,6 +368,111 @@ function cleanLatex(s) {
    _{} and ^{} disappear completely.
    ========================================================= */
 
+
+/*
+ Normalize equivalent ionic charge notation.
+
+ Examples:
+   ^+     = ^{1+} = ^{+1}
+   ^-     = ^{1-} = ^{-1}
+   ^{2+}  = ^{+2}
+   ^{2-}  = ^{-2}
+
+ Canonical form:
+   magnitude 1 -> + or -
+   magnitude >1 -> 2+, 3-, ...
+*/
+function canonicalizeChargeContent(content) {
+
+    const original = String(content ?? "");
+
+    const x = original.replace(
+        /[{}]/g,
+        ""
+    );
+
+
+    let match;
+
+
+    /* + or - */
+    match = x.match(
+        /^([+-])$/
+    );
+
+    if (match) {
+        return match[1];
+    }
+
+
+    /* 1+ or 1- */
+    match = x.match(
+        /^1([+-])$/
+    );
+
+    if (match) {
+        return match[1];
+    }
+
+
+    /* +1 or -1 */
+    match = x.match(
+        /^([+-])1$/
+    );
+
+    if (match) {
+        return match[1];
+    }
+
+
+    /* 2+, 3-, ... */
+    match = x.match(
+        /^(\d+)([+-])$/
+    );
+
+    if (match) {
+
+        const magnitude =
+            String(
+                Number(match[1])
+            );
+
+        return (
+            magnitude === "1"
+                ? ""
+                : magnitude
+        ) + match[2];
+    }
+
+
+    /* +2, -3, ... */
+    match = x.match(
+        /^([+-])(\d+)$/
+    );
+
+    if (match) {
+
+        const magnitude =
+            String(
+                Number(match[2])
+            );
+
+        return (
+            magnitude === "1"
+                ? ""
+                : magnitude
+        ) + match[1];
+    }
+
+
+    /*
+     Not a pure ionic charge.
+     Leave isotope/nuclear superscripts etc. unchanged.
+    */
+    return original;
+}
+
+
 function normalizeScripts(s) {
 
     let result = "";
@@ -516,6 +621,22 @@ function normalizeScripts(s) {
 
 
         /*
+         For superscripts, normalize equivalent charge
+         notation before comparison.
+
+         +, 1+, +1 are identical.
+         -, 1-, -1 are identical.
+        */
+        if (operator === "^") {
+
+            combined =
+                canonicalizeChargeContent(
+                    combined
+                );
+        }
+
+
+        /*
          One-character script stays compact:
            _3
 
@@ -570,39 +691,52 @@ function coreSpecies(s) {
 
     s = exactSpecies(s);
 
-    /*
-     Remove physical states wherever they occur
-     inside the normalized expression.
 
-     H_{2(g)} -> H_{2}
+    /*
+     Remove physical-state notation whether it was typed
+     inside the subscript or outside it.
+
+     Na_2SO_{4(s)}  -> Na_2SO_4
+     Na_2SO_4(s)    -> Na_2SO_4
     */
     s = s.replace(
         /\((?:aq|g|l|s)\)/g,
         ""
     );
 
+
+    /*
+     Keep common chemistry/nuclear symbols meaningful.
+    */
     s = s
-        .replace(/\\alpha/g, "α")
-        .replace(/\\beta/g, "β")
-        .replace(/\\gamma/g, "γ")
-        .replace(/\\omega/g, "ω");
+        .replace(/\alpha/g, "α")
+        .replace(/\beta/g, "β")
+        .replace(/\gamma/g, "γ")
+        .replace(/\omega/g, "ω");
+
 
     /*
-     Remove remaining LaTeX commands.
+     Remove remaining LaTeX command names.
     */
     s = s.replace(
-        /\\[A-Za-z]+/g,
+        /\[A-Za-z]+/g,
         ""
     );
 
+
     /*
-     Ignore script/bracket formatting but preserve
-     numbers, letters and charge signs.
+     Ignore whether a number/charge was entered with
+     subscript/superscript formatting.
+
+     IMPORTANT:
+     Parentheses and square brackets are NOT removed here.
+     They can be chemically meaningful, e.g. Ca(OH)_2.
     */
     s = s.replace(
-        /[_^{}()[\]]/g,
+        /[_^{}]/g,
         ""
     );
+
 
     return s;
 }
@@ -1778,11 +1912,18 @@ Promise.all([
                         false;
 
 
-                    let coefficientStatusExact =
-                        "different";
+                    /*
+                     Coefficient comparison is deliberately
+                     done with the chemistry-normalized form.
 
-
-                    let coefficientStatusCore =
+                     Therefore it is independent of:
+                       - order of reactants/products
+                       - subscript formatting
+                       - physical-state placement
+                       - + / 1+ / +1 charge notation
+                       - - / 1- / -1 charge notation
+                    */
+                    let coefficientStatus =
                         "different";
 
 
@@ -1791,15 +1932,7 @@ Promise.all([
                         tData.isReaction
                     ) {
 
-                        coefficientStatusExact =
-                            coefficientRelation(
-                                studentData,
-                                tData,
-                                "exact"
-                            );
-
-
-                        coefficientStatusCore =
+                        coefficientStatus =
                             coefficientRelation(
                                 studentData,
                                 tData,
@@ -1811,8 +1944,11 @@ Promise.all([
                     /* =====================================
                        1. COMPLETELY CORRECT
 
-                       Must use teacher's simplest integer
-                       coefficients.
+                       Order within each side does NOT matter
+                       because processChem() sorts the terms.
+
+                       Equivalent charge notation is already
+                       canonicalized before this comparison.
                        ===================================== */
 
                     if (
@@ -1825,18 +1961,18 @@ Promise.all([
 
 
                     /* =====================================
-                       2. SAME CHEMISTRY AND SAME SIMPLEST
-                          COEFFICIENTS, BUT ONLY FORMATTING
-                          / SUBSCRIPT / SUPERSCRIPT / STATE
-                          IS DIFFERENT.
+                       2. REACTION IS BALANCED IN THE SAME
+                          RATIO AS THE TEACHER, BUT THE
+                          COEFFICIENTS ARE NOT THE SIMPLEST
+                          INTEGER RATIO.
 
-                       Example:
-                         teacher: Na_2SO_4
-                         student: Na2SO_4
+                       Teacher:
+                         2,7,4,6
 
-                       These have the same chemistry core,
-                       therefore this is a formatting error
-                       and must NOT receive zero.
+                       Student:
+                         4,14,8,12
+
+                       This must NOT be treated as unbalanced.
                        ===================================== */
 
                     else if (
@@ -1845,7 +1981,72 @@ Promise.all([
 
                         tData.isReaction &&
 
-                        coefficientStatusCore ===
+                        coefficientStatus ===
+                            "proportional"
+
+                    ) {
+
+                        currentInputErrors.push(
+
+                            errorMessages[3]
+
+                            ||
+
+                            "التفاعل موزون، لكن يجب كتابة المعاملات بأبسط نسبة من الأعداد الصحيحة<br>התגובה מאוזנת, אך יש לכתוב את המקדמים ביחס המספרים השלמים הפשוט ביותר"
+                        );
+
+
+                        /*
+                         If everything except the common
+                         coefficient factor is written exactly
+                         as expected -> partial credit.
+
+                         If there is ALSO a notation/state
+                         problem -> keep the original philosophy
+                         of zero for two simultaneous problems,
+                         but report both errors.
+                        */
+                        if (
+                            studentData.speciesExact ===
+                            tData.speciesExact
+                        ) {
+
+                            grade =
+                                partialCredit;
+
+                        }
+                        else {
+
+                            isBadFormat =
+                                true;
+
+                            grade =
+                                0;
+                        }
+                    }
+
+
+                    /* =====================================
+                       3. SIMPLEST COEFFICIENTS ARE CORRECT,
+                          BUT ONLY NOTATION / SUBSCRIPT /
+                          SUPERSCRIPT / STATE FORMAT DIFFERS.
+
+                       Example:
+                         teacher: Na_2SO_4
+                         student: Na2SO_4
+
+                       Or:
+                         teacher: Na_2SO_{4(s)}
+                         student: Na_2SO_4(s)
+                       ===================================== */
+
+                    else if (
+
+                        studentData.isReaction &&
+
+                        tData.isReaction &&
+
+                        coefficientStatus ===
                             "exact"
 
                     ) {
@@ -1859,69 +2060,12 @@ Promise.all([
                     }
 
 
-                    else if (
-
-                        !studentData.isReaction &&
-
-                        !tData.isReaction &&
-
-                        studentData.speciesCore ===
-                            tData.speciesCore &&
-
-                        studentData.parsedTerm.coefficient ===
-                            tData.parsedTerm.coefficient
-
-                    ) {
-
-                        isBadFormat =
-                            true;
-
-
-                        grade =
-                            partialCredit;
-                    }
-
-
                     /* =====================================
-                       3. BALANCED, BUT NOT IN SIMPLEST
-                          INTEGER RATIO
+                       4. SAME EXACT SPECIES/NOTATION,
+                          BUT COEFFICIENTS ARE NOT
+                          PROPORTIONAL TO THE TEACHER.
 
-                       Teacher:
-                         2,7,4,6
-
-                       Student:
-                         4,14,8,12
-                       ===================================== */
-
-                    else if (
-
-                        studentData.isReaction &&
-
-                        tData.isReaction &&
-
-                        coefficientStatusExact ===
-                            "proportional"
-
-                    ) {
-
-                        grade =
-                            partialCredit;
-
-
-                        currentInputErrors.push(
-
-                            errorMessages[3]
-
-                            ||
-
-                            "التفاعل موزون، لكن يجب كتابة المعاملات بأبسط نسبة من الأعداد الصحيحة<br>התגובה מאוזנת, אך יש לכתוב את המקדמים ביחס המספרים השלמים הפשוט ביותר"
-                        );
-                    }
-
-
-                    /* =====================================
-                       3. CORRECT SPECIES / STATES /
-                          FORMATTING, BUT NOT BALANCED
+                       This is genuinely unbalanced.
                        ===================================== */
 
                     else if (
@@ -1945,44 +2089,9 @@ Promise.all([
 
 
                     /* =====================================
-                       5. BALANCED PROPORTIONALLY BUT NOT
-                          SIMPLEST, AND FORMAT/STATE IS
-                          ALSO WRONG
-                       ===================================== */
-
-                    else if (
-
-                        studentData.isReaction &&
-
-                        tData.isReaction &&
-
-                        coefficientStatusCore ===
-                            "proportional"
-
-                    ) {
-
-                        isBadFormat =
-                            true;
-
-
-                        grade =
-                            0;
-
-
-                        currentInputErrors.push(
-
-                            errorMessages[3]
-
-                            ||
-
-                            "التفاعل موزون، لكن يجب كتابة المعاملات بأبسط نسبة من الأعداد الصحيحة<br>התגובה מאוזנת, אך יש לכתוב את המקדמים ביחס המספרים השלמים הפשוט ביותר"
-                        );
-                    }
-
-
-                    /* =====================================
-                       6. SAME BASIC SPECIES BUT BOTH
-                          BALANCE AND FORMAT ARE WRONG
+                       5. SAME CHEMICAL SPECIES, BUT BOTH:
+                          - balance is wrong
+                          - notation/state format is wrong
                        ===================================== */
 
                     else if (
@@ -2010,7 +2119,40 @@ Promise.all([
 
 
                     /* =====================================
-                       8. WRONG CHEMISTRY
+                       6. SINGLE FORMULA:
+                          SAME CHEMISTRY, DIFFERENT
+                          SUBSCRIPT/SUPERSCRIPT/STATE FORMAT.
+
+                       Example:
+                         teacher: Na_2SO_4
+                         student: Na2SO_4
+                       ===================================== */
+
+                    else if (
+
+                        !studentData.isReaction &&
+
+                        !tData.isReaction &&
+
+                        studentData.speciesCore ===
+                            tData.speciesCore &&
+
+                        studentData.parsedTerm.coefficient ===
+                            tData.parsedTerm.coefficient
+
+                    ) {
+
+                        isBadFormat =
+                            true;
+
+
+                        grade =
+                            partialCredit;
+                    }
+
+
+                    /* =====================================
+                       7. WRONG CHEMICAL SPECIES
                        ===================================== */
 
                     else {
