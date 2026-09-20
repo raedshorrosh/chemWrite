@@ -1825,7 +1825,65 @@ Promise.all([
 
 
                     /* =====================================
-                       2. BALANCED, BUT NOT IN SIMPLEST
+                       2. SAME CHEMISTRY AND SAME SIMPLEST
+                          COEFFICIENTS, BUT ONLY FORMATTING
+                          / SUBSCRIPT / SUPERSCRIPT / STATE
+                          IS DIFFERENT.
+
+                       Example:
+                         teacher: Na_2SO_4
+                         student: Na2SO_4
+
+                       These have the same chemistry core,
+                       therefore this is a formatting error
+                       and must NOT receive zero.
+                       ===================================== */
+
+                    else if (
+
+                        studentData.isReaction &&
+
+                        tData.isReaction &&
+
+                        coefficientStatusCore ===
+                            "exact"
+
+                    ) {
+
+                        isBadFormat =
+                            true;
+
+
+                        grade =
+                            partialCredit;
+                    }
+
+
+                    else if (
+
+                        !studentData.isReaction &&
+
+                        !tData.isReaction &&
+
+                        studentData.speciesCore ===
+                            tData.speciesCore &&
+
+                        studentData.parsedTerm.coefficient ===
+                            tData.parsedTerm.coefficient
+
+                    ) {
+
+                        isBadFormat =
+                            true;
+
+
+                        grade =
+                            partialCredit;
+                    }
+
+
+                    /* =====================================
+                       3. BALANCED, BUT NOT IN SIMPLEST
                           INTEGER RATIO
 
                        Teacher:
@@ -1878,31 +1936,6 @@ Promise.all([
                     ) {
 
                         isUnbalanced =
-                            true;
-
-
-                        grade =
-                            partialCredit;
-                    }
-
-
-                    /* =====================================
-                       4. SIMPLEST COEFFICIENTS CORRECT,
-                          BUT STATE / SCRIPT FORMAT WRONG
-                       ===================================== */
-
-                    else if (
-
-                        studentData.isReaction &&
-
-                        tData.isReaction &&
-
-                        coefficientStatusCore ===
-                            "exact"
-
-                    ) {
-
-                        isBadFormat =
                             true;
 
 
@@ -1973,31 +2006,6 @@ Promise.all([
 
                         grade =
                             0;
-                    }
-
-
-                    /* =====================================
-                       7. SINGLE FORMULA:
-                          CORRECT CHEMISTRY, BAD FORMAT
-                       ===================================== */
-
-                    else if (
-
-                        !studentData.isReaction &&
-
-                        !tData.isReaction &&
-
-                        studentData.speciesCore ===
-                            tData.speciesCore
-
-                    ) {
-
-                        isBadFormat =
-                            true;
-
-
-                        grade =
-                            partialCredit;
                     }
 
 
