@@ -1,5 +1,4 @@
 [[iframe width="100%" height="450px"]]
-Raed 300
 [[script src="https://unpkg.com/mathlive@0.110.0"]][[/script]]
 
 [[style]]
