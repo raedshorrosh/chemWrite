@@ -1,11 +1,22 @@
 [[iframe width="100%" height="450px"]]
+
 [[script src="https://unpkg.com/mathlive@0.110.0"]][[/script]]
 
 [[style]]
 
-math-field::part(virtual-keyboard-toggle),
+/* Hide the MathLive menu button everywhere. */
 math-field::part(menu-toggle) {
     display: none !important;
+}
+
+/*
+ Keep MathLive's virtual-keyboard toggle visible on touch devices.
+ Hide it on desktop/mouse devices.
+*/
+@media (pointer: fine) {
+    math-field::part(virtual-keyboard-toggle) {
+        display: none !important;
+    }
 }
 
 #mathfields-container label {
@@ -99,9 +110,14 @@ math-field::part(menu-toggle) {
 const hideIconsStyle = document.createElement("style");
 
 hideIconsStyle.textContent = `
-    math-field::part(virtual-keyboard-toggle),
     math-field::part(menu-toggle) {
         display:none !important;
+    }
+
+    @media (pointer: fine) {
+        math-field::part(virtual-keyboard-toggle) {
+            display:none !important;
+        }
     }
 `;
 
@@ -905,8 +921,25 @@ function coreSpecies(s) {
      Na_2SO_{4(s)}  -> Na_2SO_4
      Na_2SO_4(s)    -> Na_2SO_4
     */
+    /*
+     Ignore capitalization of physical-state labels ONLY
+     in the chemistry-core comparison.
+
+     Therefore:
+       (s), (S)
+       (g), (G)
+       (l), (L)
+       (aq), (AQ), (Aq), (aQ)
+
+     all represent the same physical state chemically.
+
+     exactSpecies() still preserves the student's original
+     capitalization, so incorrect capitalization does NOT
+     receive full credit. It falls through to the
+     format/state-error branch and receives partial credit.
+    */
     s = s.replace(
-        /\((?:aq|g|l|s)\)/g,
+        /\((?:aq|g|l|s)\)/gi,
         ""
     );
 
@@ -1579,6 +1612,511 @@ let activeMathField =
 
 
 /* =========================================================
+   MATHLIVE BUILT-IN VIRTUAL KEYBOARD FOR TOUCH DEVICES
+
+   STACK renders this editor inside an iframe. MathLive's
+   "sandboxed" policy keeps the virtual keyboard inside the
+   current iframe instead of trying to control a keyboard in
+   the parent page.
+
+   On iPad/tablets/phones:
+     - use MathLive's own virtual keyboard
+     - show it whenever a chemistry math-field gets focus
+     - keep the built-in keyboard toggle visible
+
+   On desktop:
+     - physical keyboard behavior remains unchanged
+     - the virtual-keyboard toggle remains hidden
+   ========================================================= */
+
+/*
+ Only auto-enable the MathLive virtual keyboard on mobile/tablet
+ touch devices.
+
+ We intentionally do NOT use navigator.maxTouchPoints by itself,
+ because many Windows PCs/laptops report touch points and would
+ otherwise open the virtual keyboard even when a mouse/physical
+ keyboard is being used.
+*/
+const isTouchDevice =
+    (
+        typeof navigator !== "undefined" &&
+        (
+            /iPad|iPhone|iPod|Android|Mobile|Tablet/i.test(
+                navigator.userAgent || ""
+            )
+            ||
+            (
+                navigator.platform === "MacIntel" &&
+                navigator.maxTouchPoints > 1
+            )
+        )
+    );
+
+
+let localMathVirtualKeyboard =
+    null;
+
+
+/*
+ Host for MathLive's virtual keyboard.
+
+ IMPORTANT:
+ This host stays in the normal document flow. We do NOT use
+ position:fixed and we do NOT force its height to zero.
+
+ When MathLive reports the keyboard geometry, the host grows
+ to exactly the keyboard height. This gives the keyboard its
+ own space in the STACK iframe, so it cannot cover a chemistry
+ input field.
+*/
+let mathKeyboardHost =
+    null;
+
+
+function ensureMathKeyboardHost() {
+
+    if (!isTouchDevice) {
+        return null;
+    }
+
+
+    if (mathKeyboardHost) {
+        return mathKeyboardHost;
+    }
+
+
+    const host =
+        document.createElement(
+            "div"
+        );
+
+
+    host.id =
+        "chem-mathlive-keyboard-host";
+
+
+    host.style.cssText = `
+        position:relative;
+        width:100%;
+        min-width:320px;
+        height:1px;
+        overflow:visible;
+        box-sizing:border-box;
+        clear:both;
+        z-index:9999;
+    `;
+
+
+    /*
+     Let MathLive calculate its own responsive keyboard size.
+     Do not override keycap height/gaps/padding here: MathLive
+     uses those values when computing the panel height, and
+     forcing them in a custom container can clip the last row.
+    */
+    host.style.setProperty(
+        "--keyboard-zindex",
+        "9999"
+    );
+
+
+    /*
+     Put the keyboard after all chemistry input fields.
+    */
+    const mainContainer =
+        document.getElementById(
+            "mathfields-container"
+        );
+
+
+    if (
+        mainContainer &&
+        mainContainer.parentNode
+    ) {
+
+        mainContainer.parentNode.appendChild(
+            host
+        );
+
+    }
+    else {
+
+        document.body.appendChild(
+            host
+        );
+    }
+
+
+    mathKeyboardHost =
+        host;
+
+
+    return host;
+}
+
+
+function resizeMathKeyboardHost() {
+
+    if (
+        !mathKeyboardHost
+    ) {
+        return;
+    }
+
+
+    const keyboard =
+        localMathVirtualKeyboard ||
+        window.mathVirtualKeyboard;
+
+
+    if (
+        !keyboard ||
+        !keyboard.visible
+    ) {
+
+        mathKeyboardHost.style.height =
+            "1px";
+
+        return;
+    }
+
+
+    let height =
+        0;
+
+
+    try {
+
+        if (
+            keyboard.boundingRect &&
+            keyboard.boundingRect.height
+        ) {
+
+            height =
+                Math.ceil(
+                    keyboard.boundingRect.height
+                );
+        }
+
+    }
+    catch (e) {}
+
+
+    /*
+     During the first frame MathLive may not have measured
+     the keyboard yet. Leave a small host and geometrychange
+     will correct it immediately afterward.
+    */
+    mathKeyboardHost.style.height =
+        (
+            height > 0
+                ? height
+                : 1
+        )
+        +
+        "px";
+
+
+    /*
+     STACK iframe height depends on document height.
+     Let the existing autoResize() routine see the new host
+     size on the next animation frame.
+    */
+    requestAnimationFrame(
+        () => {
+
+            try {
+                autoResize();
+            }
+            catch (e) {}
+        }
+    );
+}
+
+
+function initializeTouchVirtualKeyboard() {
+
+    if (!isTouchDevice) {
+        return;
+    }
+
+
+    try {
+
+        /*
+         MathLive 0.107+ can explicitly mount the virtual
+         keyboard in the current browsing context (iframe).
+        */
+        if (
+            window.MathLive &&
+            typeof window.MathLive
+                .initVirtualKeyboardInCurrentBrowsingContext ===
+                "function"
+        ) {
+
+            localMathVirtualKeyboard =
+                window.MathLive
+                    .initVirtualKeyboardInCurrentBrowsingContext();
+        }
+
+    }
+    catch (e) {
+
+        console.warn(
+            "Could not initialize MathLive keyboard in iframe:",
+            e
+        );
+    }
+
+
+    /*
+     Fallback: MathLive also exposes the active virtual
+     keyboard through window.mathVirtualKeyboard.
+    */
+    if (
+        !localMathVirtualKeyboard &&
+        window.mathVirtualKeyboard
+    ) {
+
+        localMathVirtualKeyboard =
+            window.mathVirtualKeyboard;
+    }
+
+
+    if (localMathVirtualKeyboard) {
+
+        try {
+
+            /*
+             Attach MathLive's keyboard to an in-flow host.
+             The host expands to the keyboard's real height,
+             so the keyboard does not cover an input field.
+            */
+            const host =
+                ensureMathKeyboardHost();
+
+
+            if (host) {
+
+                localMathVirtualKeyboard.container =
+                    host;
+            }
+
+
+            /*
+             Show ONLY MathLive's alphabetic (ABC) keyboard.
+            */
+            localMathVirtualKeyboard.layouts =
+                ["alphabetic"];
+
+
+            if (
+                typeof localMathVirtualKeyboard.addEventListener ===
+                "function"
+            ) {
+
+                localMathVirtualKeyboard.addEventListener(
+                    "geometrychange",
+                    () => {
+
+                        resizeMathKeyboardHost();
+                    }
+                );
+            }
+
+        }
+        catch (e) {
+
+            console.warn(
+                "Could not configure MathLive virtual keyboard:",
+                e
+            );
+        }
+    }
+}
+
+
+function showTouchVirtualKeyboard() {
+
+    if (!isTouchDevice) {
+        return;
+    }
+
+
+    /*
+     Never open MathLive's virtual keyboard for a field that
+     has already been graded / locked.
+    */
+    if (
+        !activeMathField ||
+        activeMathField.readOnly ||
+        activeMathField.disabled ||
+        activeMathField.hasAttribute("readonly") ||
+        activeMathField.hasAttribute("disabled")
+    ) {
+        return;
+    }
+
+
+    const keyboard =
+        localMathVirtualKeyboard ||
+        window.mathVirtualKeyboard;
+
+
+    if (!keyboard) {
+        return;
+    }
+
+
+    try {
+
+        /*
+         MathLive uses one shared virtual keyboard instance.
+         Re-apply alphabetic-only mode whenever it is shown
+         so another field cannot restore the default layouts.
+        */
+        keyboard.layouts =
+            ["alphabetic"];
+
+
+        const host =
+            ensureMathKeyboardHost();
+
+
+        if (host) {
+
+            keyboard.container =
+                host;
+        }
+
+
+        if (
+            typeof keyboard.show ===
+            "function"
+        ) {
+
+            keyboard.show(
+                {
+                    animate:
+                        true
+                }
+            );
+
+        }
+        else {
+
+            keyboard.visible =
+                true;
+        }
+
+
+        /*
+         Give MathLive one or two frames to calculate its
+         actual geometry, then reserve exactly that height.
+        */
+        requestAnimationFrame(
+            () => {
+
+                resizeMathKeyboardHost();
+
+
+                requestAnimationFrame(
+                    () => {
+
+                        resizeMathKeyboardHost();
+                    }
+                );
+            }
+        );
+
+    }
+    catch (e) {
+
+        console.warn(
+            "Could not show MathLive virtual keyboard:",
+            e
+        );
+    }
+}
+
+
+/*
+ Hide MathLive's virtual keyboard immediately.
+ Used when a question/field becomes read-only after grading.
+*/
+function hideTouchVirtualKeyboard() {
+
+    const keyboard =
+        localMathVirtualKeyboard ||
+        window.mathVirtualKeyboard;
+
+
+    if (!keyboard) {
+        return;
+    }
+
+
+    try {
+
+        if (
+            typeof keyboard.hide ===
+            "function"
+        ) {
+
+            keyboard.hide(
+                {
+                    animate:
+                        true
+                }
+            );
+
+        }
+        else {
+
+            keyboard.visible =
+                false;
+        }
+
+    }
+    catch (e) {
+
+        console.warn(
+            "Could not hide MathLive virtual keyboard:",
+            e
+        );
+    }
+
+
+    /*
+     Collapse the in-flow keyboard host so it does not leave
+     blank space after the keyboard has been hidden.
+    */
+    if (mathKeyboardHost) {
+
+        mathKeyboardHost.style.height =
+            "1px";
+    }
+
+
+    requestAnimationFrame(
+        () => {
+
+            try {
+                autoResize();
+            }
+            catch (e) {}
+        }
+    );
+}
+
+
+/*
+ Initialize once after MathLive has loaded in this iframe.
+*/
+initializeTouchVirtualKeyboard();
+
+
+/* =========================================================
    CREATE MATH FIELDS
    ========================================================= */
 
@@ -1692,6 +2230,27 @@ tas.forEach(
         );
 
 
+        /*
+         Touch devices: use the MathLive keyboard mounted
+         inside this STACK iframe.
+        */
+        if (isTouchDevice) {
+
+            mf.setAttribute(
+                "math-virtual-keyboard-policy",
+                "sandboxed"
+            );
+
+            try {
+
+                mf.mathVirtualKeyboardPolicy =
+                    "sandboxed";
+
+            }
+            catch (e) {}
+        }
+
+
         mf.style.cssText = `
             width:100%;
             font-size:1.4em;
@@ -1711,6 +2270,27 @@ tas.forEach(
 
                 activeMathField =
                     mf;
+
+
+                /*
+                 On touch devices show MathLive's keyboard only
+                 while this field is still editable.
+                */
+                if (
+                    !mf.readOnly &&
+                    !mf.disabled &&
+                    !mf.hasAttribute("readonly") &&
+                    !mf.hasAttribute("disabled")
+                ) {
+
+                    showTouchVirtualKeyboard();
+
+                }
+                else {
+
+                    hideTouchVirtualKeyboard();
+                }
+
 
                 mf.style.boxShadow =
                     "0 0 0 4px rgba(147,197,253,0.4)";
@@ -2659,6 +3239,13 @@ Promise.all([
         ) {
 
 
+            /*
+             Question has been graded/locked: remove MathLive's
+             virtual keyboard immediately and keep it closed.
+            */
+            hideTouchVirtualKeyboard();
+
+
             btnContainer.style.pointerEvents =
                 "none";
 
@@ -2720,6 +3307,19 @@ Promise.all([
 
                     mfObj.element.readOnly =
                         true;
+
+
+                    /*
+                     If this is the currently active field,
+                     make sure no virtual keyboard remains open.
+                    */
+                    if (
+                        activeMathField ===
+                        mfObj.element
+                    ) {
+
+                        hideTouchVirtualKeyboard();
+                    }
 
 
                     const grade =
