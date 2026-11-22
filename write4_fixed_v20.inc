@@ -293,7 +293,7 @@ catch (e) {}
        auto_write:1;   enabled
        auto_write:0;   disabled
 
-   If absent/unresolved, the default is ON.
+   Default when absent/unresolved: ON.
    ========================================================= */
 
 function readAutoWriteFlag() {
@@ -309,6 +309,7 @@ function readAutoWriteFlag() {
         raw === undefined ||
         String(raw).trim() === ""
     ) {
+
         return true;
     }
 
@@ -2165,49 +2166,189 @@ initializeTouchVirtualKeyboard();
 
 
 /* =========================================================
-   CHEMISTRY AUTO-WRITE: LOCAL LATEX REWRITE
+   CHEMISTRY AUTO-WRITE — CURSOR-ONLY VERSION
 
-   This starts from v15 and uses a different architecture.
+   This version deliberately does NOT rewrite LaTeX and does
+   NOT parse/convert complete state-of-matter strings.
 
-   It NEVER enters/leaves MathLive subscripts or superscripts.
-   MathLive processes the keystroke normally first. Then, only
-   for sequential typing at the END of the field, a small
-   trailing LaTeX token is rewritten.
+   It only controls WHERE MathLive types.
 
-   Examples:
-       H2           -> H_{2}
-       C12          -> C_{12}
-       2H2O         -> 2H_{2}O
-       Ca(OH)2      -> Ca(OH)_{2}
+   Core behavior:
 
-       H2O(g)       -> H_{2}O_{(g)}
-       O2(g)        -> O_{2(g)}
-       SO4^{2-}(aq) -> SO_{4(aq)}^{2-}
+       H 2
+         -> digit is entered into subscript
+         -> caret STAYS inside that subscript
 
-   State conversion runs ONLY when the student explicitly
-   types the closing ")" character.
+       H 2 O
+         -> O is an element letter
+         -> caret first leaves the subscript
+         -> O is typed on the normal baseline
+
+       O 2 ( g )
+         -> 2 is subscript
+         -> "(" temporarily leaves the subscript
+         -> when "g" is typed, "(" is moved back into the
+            existing subscript and MathLive continues there
+         -> ")" is handled naturally by MathLive
+
+       H Cl ( aq )
+         -> "(" starts normally
+         -> "a" identifies a physical-state entry
+         -> "(" + "a" are placed in a new subscript
+         -> q and ) continue naturally
+
+       Ca ( O H ) 2
+         -> "(" stays on the baseline because O is uppercase
+         -> final 2 becomes subscript
+
+   No state conversion is performed when ")" is typed.
    ========================================================= */
 
 
-function getTrailingChemTermForAuto(
-    latex
+const chemAutoCursorState =
+    new WeakMap();
+
+
+function getChemAutoCursorState(
+    mf
 ) {
 
-    let s =
+    if (
+        !chemAutoCursorState.has(
+            mf
+        )
+    ) {
+
+        chemAutoCursorState.set(
+            mf,
+            {
+                inAutoSubscript:
+                    false,
+
+                baselineParenCandidate:
+                    false,
+
+                stateTyping:
+                    false,
+
+                statePrefix:
+                    "",
+
+                internalEdit:
+                    false
+            }
+        );
+    }
+
+
+    return chemAutoCursorState.get(
+        mf
+    );
+}
+
+
+function resetChemAutoCursorState(
+    mf
+) {
+
+    const state =
+        getChemAutoCursorState(
+            mf
+        );
+
+
+    state.inAutoSubscript =
+        false;
+
+    state.baselineParenCandidate =
+        false;
+
+    state.stateTyping =
+        false;
+
+    state.statePrefix =
+        "";
+}
+
+
+function getAutoTypedCharacter(
+    event
+) {
+
+    /*
+     MathLive documents that inputType may be absent on iOS,
+     so event.data is also checked directly.
+    */
+    if (
+        event.inputType &&
+        event.inputType !== "insertText"
+    ) {
+
+        return null;
+    }
+
+
+    if (
+        typeof event.data !==
+        "string"
+    ) {
+
+        return null;
+    }
+
+
+    if (
+        /^insert[A-Z]/.test(
+            event.data
+        )
+        ||
+        /^delete[A-Z]/.test(
+            event.data
+        )
+    ) {
+
+        return null;
+    }
+
+
+    if (
+        [...event.data].length !==
+        1
+    ) {
+
+        return null;
+    }
+
+
+    return event.data;
+}
+
+
+/*
+ Return the current reaction term at the end of the MathLive
+ value. Used only to distinguish a leading coefficient from
+ a formula number.
+*/
+function getAutoCurrentTerm(
+    mf
+) {
+
+    let latex =
         cleanLatex(
-            latex
+            mf.value || ""
         );
 
 
     const arrow =
         findReactionArrow(
-            s
+            latex
         );
 
 
     if (arrow) {
-        s =
-            s.slice(
+
+        latex =
+            latex.slice(
                 arrow.end
             );
     }
@@ -2215,556 +2356,219 @@ function getTrailingChemTermForAuto(
 
     const terms =
         splitTerms(
-            s
+            latex
+        );
+
+
+    if (
+        terms.length === 0
+    ) {
+
+        return "";
+    }
+
+
+    return terms[
+        terms.length - 1
+    ];
+}
+
+
+/*
+ A digit is a coefficient only while the current term contains
+ digits and nothing else.
+
+     2        coefficient
+     12       coefficient
+     2H2      final 2 is formula subscript
+*/
+function autoDigitIsCoefficient(
+    mf
+) {
+
+    const term =
+        getAutoCurrentTerm(
+            mf
         );
 
 
     return (
-        terms.length > 0
-            ? terms[terms.length - 1]
-            : ""
-    );
-}
-
-
-function findMatchingOpeningBraceFromEnd(
-    s
-) {
-
-    if (
-        !s ||
-        s[s.length - 1] !== "}"
-    ) {
-        return -1;
-    }
-
-
-    let depth =
-        0;
-
-
-    for (
-        let i = s.length - 1;
-        i >= 0;
-        i--
-    ) {
-
-        if (s[i] === "}") {
-            depth++;
-        }
-        else if (s[i] === "{") {
-
-            depth--;
-
-            if (depth === 0) {
-                return i;
-            }
-        }
-    }
-
-
-    return -1;
-}
-
-
-function peelOneTrailingSuperscript(
-    s
-) {
-
-    if (!s) {
-        return null;
-    }
-
-
-    if (
-        s.endsWith(
-            "}"
-        )
-    ) {
-
-        const open =
-            findMatchingOpeningBraceFromEnd(
-                s
-            );
-
-
-        if (
-            open > 0 &&
-            s[open - 1] === "^"
-        ) {
-
-            return {
-                base:
-                    s.slice(
-                        0,
-                        open - 1
-                    ),
-
-                script:
-                    s.slice(
-                        open - 1
-                    )
-            };
-        }
-    }
-
-
-    const unbraced =
-        s.match(
-            /\^(?:\d+[+-]|[+-]\d*|[+-]|\d)$/
-        );
-
-
-    if (unbraced) {
-
-        return {
-            base:
-                s.slice(
-                    0,
-                    unbraced.index
-                ),
-
-            script:
-                unbraced[0]
-        };
-    }
-
-
-    return null;
-}
-
-
-function peelTrailingSuperscripts(
-    s
-) {
-
-    let base =
-        s;
-
-    let suffix =
-        "";
-
-
-    while (true) {
-
-        const peeled =
-            peelOneTrailingSuperscript(
-                base
-            );
-
-
-        if (!peeled) {
-            break;
-        }
-
-
-        base =
-            peeled.base;
-
-
-        suffix =
-            peeled.script +
-            suffix;
-    }
-
-
-    return {
-        base:
-            base,
-
-        suffix:
-            suffix
-    };
-}
-
-
-function peelTrailingSubscript(
-    s
-) {
-
-    if (!s) {
-        return null;
-    }
-
-
-    if (
-        s.endsWith(
-            "}"
-        )
-    ) {
-
-        const open =
-            findMatchingOpeningBraceFromEnd(
-                s
-            );
-
-
-        if (
-            open > 0 &&
-            s[open - 1] === "_"
-        ) {
-
-            return {
-                base:
-                    s.slice(
-                        0,
-                        open - 1
-                    ),
-
-                content:
-                    s.slice(
-                        open + 1,
-                        -1
-                    )
-            };
-        }
-    }
-
-
-    const unbraced =
-        s.match(
-            /_([^{}\\])$/
-        );
-
-
-    if (unbraced) {
-
-        return {
-            base:
-                s.slice(
-                    0,
-                    unbraced.index
-                ),
-
-            content:
-                unbraced[1]
-        };
-    }
-
-
-    return null;
-}
-
-
-function trailingDigitAlreadyScripted(
-    latex
-) {
-
-    return (
-        /_(?:\{\d+\}|\d)$/.test(
-            latex
-        )
-        ||
-        /\^(?:\{\d+\}|\d)$/.test(
-            latex
-        )
-    );
-}
-
-
-function rewriteTrailingFormulaDigit(
-    latex
-) {
-
-    const s =
-        String(
-            latex ?? ""
-        );
-
-
-    if (
-        !/\d$/.test(
-            s
-        )
-    ) {
-        return s;
-    }
-
-
-    /*
-     If the student explicitly typed inside a manual script,
-     do not touch it.
-    */
-    if (
-        trailingDigitAlreadyScripted(
-            s
-        )
-    ) {
-        return s;
-    }
-
-
-    /*
-     Continue an auto-created multi-digit subscript:
-         C_{1}2  -> C_{12}
-    */
-    const merge =
-        s.match(
-            /^(.*)_\{(\d+)\}(\d+)$/
-        );
-
-
-    if (merge) {
-
-        return (
-            merge[1] +
-            "_{" +
-            merge[2] +
-            merge[3] +
-            "}"
-        );
-    }
-
-
-    /*
-     Pure number at the beginning of the current species is
-     a stoichiometric coefficient.
-    */
-    const currentTerm =
-        getTrailingChemTermForAuto(
-            s
-        );
-
-
-    if (
+        term === "" ||
         /^\d+$/.test(
-            currentTerm
+            term
         )
-    ) {
-        return s;
-    }
-
-
-    const trailing =
-        s.match(
-            /^(.*?)(\d+)$/
-        );
-
-
-    if (!trailing) {
-        return s;
-    }
-
-
-    const before =
-        trailing[1];
-
-    const digits =
-        trailing[2];
-
-
-    if (before === "") {
-        return s;
-    }
-
-
-    /*
-     A chemical formula number should follow an element or a
-     closed chemical group.
-    */
-    const cleanedBefore =
-        cleanLatex(
-            before
-        );
-
-
-    if (
-        !/[A-Za-z)\]]$/.test(
-            cleanedBefore
-        )
-    ) {
-        return s;
-    }
-
-
-    return (
-        before +
-        "_{" +
-        digits +
-        "}"
     );
 }
 
 
-function matchTrailingPhysicalState(
-    latex
-) {
-
-    const s =
-        String(
-            latex ?? ""
-        );
-
-
-    const patterns =
-        [
-            /\\left\(\s*(aq|g|l|s)\s*\\right\)$/i,
-            /\(\s*(aq|g|l|s)\s*\)$/i
-        ];
-
-
-    for (
-        const pattern of patterns
-    ) {
-
-        const match =
-            s.match(
-                pattern
-            );
-
-
-        if (match) {
-
-            return {
-                state:
-                    match[1],
-
-                start:
-                    match.index
-            };
-        }
-    }
-
-
-    return null;
-}
-
-
-function rewriteTrailingPhysicalState(
-    latex
-) {
-
-    const s =
-        String(
-            latex ?? ""
-        );
-
-
-    const stateMatch =
-        matchTrailingPhysicalState(
-            s
-        );
-
-
-    if (!stateMatch) {
-        return s;
-    }
-
-
-    let formula =
-        s.slice(
-            0,
-            stateMatch.start
-        );
-
-
-    if (formula === "") {
-        return s;
-    }
-
-
-    /*
-     Temporarily remove a trailing charge/superscript so the
-     state can be attached to the formula's subscript, then put
-     the charge back exactly as MathLive had it.
-    */
-    const superscripts =
-        peelTrailingSuperscripts(
-            formula
-        );
-
-
-    formula =
-        superscripts.base;
-
-
-    const existingSubscript =
-        peelTrailingSubscript(
-            formula
-        );
-
-
-    if (existingSubscript) {
-
-        /*
-         O_{2}(g)
-             -> O_{2(g)}
-
-         SO_{4}^{2-}(aq)
-             -> SO_{4(aq)}^{2-}
-        */
-        return (
-            existingSubscript.base +
-            "_{" +
-            existingSubscript.content +
-            "(" +
-            stateMatch.state +
-            ")" +
-            "}" +
-            superscripts.suffix
-        );
-    }
-
-
-    /*
-     H_{2}O(g)
-         -> H_{2}O_{(g)}
-
-     NaCl(s)
-         -> NaCl_{(s)}
-    */
-    return (
-        formula +
-        "_{(" +
-        stateMatch.state +
-        ")}" +
-        superscripts.suffix
-    );
-}
-
-
-function applyAutoRewriteValue(
+/*
+ Run programmatic MathLive edits without recursively treating
+ them as student typing.
+*/
+function runChemAutoInternal(
     mf,
-    newValue
+    callback
 ) {
 
-    if (
-        newValue ===
-        mf.value
-    ) {
-        return false;
-    }
+    const state =
+        getChemAutoCursorState(
+            mf
+        );
 
 
-    mf.setValue(
-        newValue,
-        {
-            silenceNotifications:
-                true
-        }
-    );
+    state.internalEdit =
+        true;
 
 
     try {
-        mf.position =
-            mf.lastOffset;
+
+        callback();
+
     }
-    catch (e) {}
+    finally {
 
-
-    return true;
+        state.internalEdit =
+            false;
+    }
 }
 
 
-function enableChemistryAutoRewrite(
+/*
+ Leave the automatically created/current subscript and insert
+ one ordinary baseline character.
+
+ Used for:
+     H2O
+       ^
+       O must be baseline
+
+ and for separators after a completed state.
+*/
+function insertAfterAutoSubscript(
+    mf,
+    character
+) {
+
+    const state =
+        getChemAutoCursorState(
+            mf
+        );
+
+
+    runChemAutoInternal(
+        mf,
+        () => {
+
+            mf.executeCommand(
+                "moveAfterParent"
+            );
+
+
+            mf.insert(
+                character
+            );
+        }
+    );
+
+
+    state.inAutoSubscript =
+        false;
+
+    state.stateTyping =
+        false;
+
+    state.statePrefix =
+        "";
+}
+
+
+/*
+ When "(" has just been typed on the baseline and the next
+ character is lowercase g/l/s/a, reinterpret that opening
+ parenthesis as the beginning of a physical state.
+
+ We remove only the baseline "(" and enter the subscript.
+ MathLive then handles the rest naturally.
+
+ Examples:
+     HCl(s)
+     H2O(g)
+     NaOH(aq)
+*/
+function startStateFromBaselineParen(
+    mf,
+    firstStateChar
+) {
+
+    const state =
+        getChemAutoCursorState(
+            mf
+        );
+
+
+    runChemAutoInternal(
+        mf,
+        () => {
+
+            /*
+             Remove the "(" that was just typed on the baseline.
+             With MathLive smart fences, deleteBackward also
+             handles the paired-fence editing behavior.
+            */
+            mf.executeCommand(
+                "deleteBackward"
+            );
+
+
+            /*
+             Enter an existing subscript if one exists, or
+             create a new one if necessary.
+            */
+            mf.executeCommand(
+                "moveToSubscript"
+            );
+
+
+            mf.insert(
+                "(" + firstStateChar
+            );
+        }
+    );
+
+
+    state.inAutoSubscript =
+        true;
+
+    state.baselineParenCandidate =
+        false;
+
+    state.stateTyping =
+        true;
+
+    state.statePrefix =
+        firstStateChar.toLowerCase();
+}
+
+
+/*
+ Attach the simple cursor-only chemistry assistance.
+*/
+function enableChemistryCursorAuto(
     mf
 ) {
 
     if (
         !autoWriteEnabled
     ) {
+
         return;
     }
+
+
+    const state =
+        getChemAutoCursorState(
+            mf
+        );
 
 
     mf.addEventListener(
@@ -2772,115 +2576,436 @@ function enableChemistryAutoRewrite(
         event => {
 
             if (
+                state.internalEdit ||
                 mf.readOnly ||
                 mf.disabled
             ) {
-                return;
-            }
 
-
-            if (
-                event.inputType &&
-                event.inputType !==
-                    "insertText"
-            ) {
-                return;
-            }
-
-
-            if (
-                typeof event.data !==
-                "string"
-            ) {
                 return;
             }
 
 
             const typed =
-                event.data;
+                getAutoTypedCharacter(
+                    event
+                );
 
 
-            /*
-             We only observe the keystroke. We NEVER cancel it.
-            */
             if (
-                !/^\d$/.test(
-                    typed
-                )
-                &&
-                typed !== ")"
+                typed === null
             ) {
+
+                /*
+                 Deletion, paste, undo, etc. can invalidate the
+                 sequential typing state. Do not interfere.
+                */
+                if (
+                    event.inputType &&
+                    (
+                        event.inputType.startsWith("delete") ||
+                        event.inputType === "historyUndo" ||
+                        event.inputType === "historyRedo" ||
+                        event.inputType === "insertFromPaste"
+                    )
+                ) {
+
+                    resetChemAutoCursorState(
+                        mf
+                    );
+                }
+
+
                 return;
             }
 
 
-            setTimeout(
-                () => {
+            /* -------------------------------------------------
+               BASELINE "(" MAY BECOME A PHYSICAL STATE
+               ------------------------------------------------- */
+
+            if (
+                state.baselineParenCandidate
+            ) {
+
+                /*
+                 Correct state names begin with lowercase:
+                     g, l, s, a(q)
+
+                 This cleanly distinguishes them from chemical
+                 groups such as:
+                     (OH)
+                     (SO4)
+                     (NH4)
+
+                 which begin with an uppercase element symbol.
+                */
+                if (
+                    /^[glsa]$/.test(
+                        typed
+                    )
+                ) {
+
+                    event.preventDefault();
+
+
+                    startStateFromBaselineParen(
+                        mf,
+                        typed
+                    );
+
+
+                    return;
+                }
+
+
+                /*
+                 Not a state. The "(" remains normal baseline
+                 chemistry and MathLive handles this character.
+                */
+                state.baselineParenCandidate =
+                    false;
+            }
+
+
+            /* -------------------------------------------------
+               WHILE INSIDE AN AUTO SUBSCRIPT
+               ------------------------------------------------- */
+
+            if (
+                state.inAutoSubscript
+            ) {
+
+                /*
+                 Consecutive digits naturally remain in the
+                 same subscript:
+                     C12 -> C_{12}
+                */
+                if (
+                    /^\d$/.test(
+                        typed
+                    )
+                ) {
+
+                    return;
+                }
+
+
+                /*
+                 While typing a physical state, let MathLive
+                 handle q and the closing parenthesis naturally.
+
+                 Examples:
+                     (g)
+                     (l)
+                     (s)
+                     (aq)
+                */
+                if (
+                    state.stateTyping
+                ) {
 
                     if (
-                        mf.readOnly ||
-                        mf.disabled
+                        state.statePrefix === "a" &&
+                        /^[qQ]$/.test(
+                            typed
+                        )
                     ) {
+
+                        state.statePrefix +=
+                            typed.toLowerCase();
+
+                        return;
+                    }
+
+
+                    if (
+                        typed === ")"
+                    ) {
+
+                        state.stateTyping =
+                            false;
+
+                        state.statePrefix =
+                            "";
+
+                        /*
+                         Keep the caret in the subscript for the
+                         moment. The NEXT baseline character,
+                         such as + or an arrow component, will
+                         move it out automatically.
+                        */
                         return;
                     }
 
 
                     /*
-                     Safety rule: auto-write is for sequential
-                     entry only. Editing in the middle remains
-                     untouched.
+                     Any unexpected character ends the state
+                     typing context and returns to baseline.
                     */
-                    if (
-                        mf.position !==
-                        mf.lastOffset
-                    ) {
-                        return;
-                    }
+                    event.preventDefault();
 
 
-                    const current =
-                        mf.value;
-
-
-                    let rewritten =
-                        current;
-
-
-                    if (
-                        /^\d$/.test(
-                            typed
-                        )
-                    ) {
-
-                        rewritten =
-                            rewriteTrailingFormulaDigit(
-                                current
-                            );
-
-                    }
-                    else if (
-                        typed === ")"
-                    ) {
-
-                        /*
-                         This can run ONLY because the student
-                         actually pressed/selected ")".
-                         Auto-paired ")" does not trigger it.
-                        */
-                        rewritten =
-                            rewriteTrailingPhysicalState(
-                                current
-                            );
-                    }
-
-
-                    applyAutoRewriteValue(
+                    insertAfterAutoSubscript(
                         mf,
-                        rewritten
+                        typed
                     );
 
-                },
-                0
+
+                    return;
+                }
+
+
+                /*
+                 An opening parenthesis after a formula
+                 subscript may be a state, but may also begin a
+                 chemical group.
+
+                 To avoid trapping a normal group inside the
+                 subscript, put "(" on the baseline first. If
+                 the next character is lowercase g/l/s/a, the
+                 small handler above moves it back into the
+                 subscript.
+                */
+                if (
+                    typed === "("
+                ) {
+
+                    event.preventDefault();
+
+
+                    insertAfterAutoSubscript(
+                        mf,
+                        "("
+                    );
+
+
+                    state.baselineParenCandidate =
+                        true;
+
+
+                    return;
+                }
+
+
+                /*
+                 A new element always starts on the baseline.
+
+                     H2O
+                        ^
+                        O exits the subscript first
+
+                 Both uppercase and lowercase are handled here.
+                 The lowercase case is mainly a safety fallback;
+                 normal two-letter symbols are already typed on
+                 the baseline after their uppercase first letter.
+                */
+                if (
+                    /^[A-Za-z]$/.test(
+                        typed
+                    )
+                ) {
+
+                    event.preventDefault();
+
+
+                    insertAfterAutoSubscript(
+                        mf,
+                        typed
+                    );
+
+
+                    return;
+                }
+
+
+                /*
+                 Closing formula groups and ordinary separators
+                 belong on the baseline, not in the numeric
+                 subscript.
+                */
+                if (
+                    typed === ")" ||
+                    typed === "]" ||
+                    typed === "+" ||
+                    typed === "=" ||
+                    typed === "," ||
+                    typed === ";"
+                ) {
+
+                    event.preventDefault();
+
+
+                    insertAfterAutoSubscript(
+                        mf,
+                        typed
+                    );
+
+
+                    return;
+                }
+
+
+                /*
+                 For any other ordinary character, stop the
+                 automatic subscript context conservatively.
+                */
+                event.preventDefault();
+
+
+                insertAfterAutoSubscript(
+                    mf,
+                    typed
+                );
+
+
+                return;
+            }
+
+
+            /* -------------------------------------------------
+               NORMAL BASELINE TYPING
+               ------------------------------------------------- */
+
+            if (
+                /^\d$/.test(
+                    typed
+                )
+            ) {
+
+                /*
+                 Leading digits remain stoichiometric
+                 coefficients.
+                */
+                if (
+                    autoDigitIsCoefficient(
+                        mf
+                    )
+                ) {
+
+                    return;
+                }
+
+
+                /*
+                 Formula digit:
+                     H2
+                     SO4
+                     C12
+
+                 Enter the subscript and KEEP the caret there.
+                */
+                event.preventDefault();
+
+
+                runChemAutoInternal(
+                    mf,
+                    () => {
+
+                        mf.executeCommand(
+                            "moveToSubscript"
+                        );
+
+
+                        mf.insert(
+                            typed
+                        );
+                    }
+                );
+
+
+                state.inAutoSubscript =
+                    true;
+
+                state.baselineParenCandidate =
+                    false;
+
+                state.stateTyping =
+                    false;
+
+                state.statePrefix =
+                    "";
+
+
+                return;
+            }
+
+
+            /*
+             A baseline "(" after a chemical formula is only a
+             candidate. Do not format anything yet.
+
+             If the next character is lowercase g/l/s/a, it is
+             moved into the subscript. If the next character is
+             uppercase, normal group typing continues untouched.
+            */
+            if (
+                typed === "("
+            ) {
+
+                const term =
+                    getAutoCurrentTerm(
+                        mf
+                    );
+
+
+                if (
+                    term !== "" &&
+                    !/^\d+$/.test(
+                        term
+                    )
+                ) {
+
+                    state.baselineParenCandidate =
+                        true;
+                }
+            }
+        }
+    );
+
+
+    /*
+     Manual caret navigation means the student is explicitly
+     editing another position. Stop making assumptions about
+     the previous automatic cursor context.
+    */
+    mf.addEventListener(
+        "pointerdown",
+        () => {
+
+            resetChemAutoCursorState(
+                mf
+            );
+        }
+    );
+
+
+    mf.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key === "ArrowLeft" ||
+                event.key === "ArrowRight" ||
+                event.key === "ArrowUp" ||
+                event.key === "ArrowDown" ||
+                event.key === "Home" ||
+                event.key === "End"
+            ) {
+
+                resetChemAutoCursorState(
+                    mf
+                );
+            }
+        }
+    );
+
+
+    mf.addEventListener(
+        "focusout",
+        () => {
+
+            resetChemAutoCursorState(
+                mf
             );
         }
     );
@@ -3036,10 +3161,9 @@ tas.forEach(
 
 
         /*
-         Auto chemistry typing.
-         Local trailing-LaTeX rewrite only.
+         Cursor-only chemistry auto typing.
         */
-        enableChemistryAutoRewrite(
+        enableChemistryCursorAuto(
             mf
         );
 
